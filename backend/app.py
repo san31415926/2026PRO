@@ -907,6 +907,19 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
 
+        # 自动补充新增字段（create_all 不会给已有表加列）
+        with db.engine.connect() as conn:
+            from sqlalchemy import text, inspect
+            inspector = inspect(db.engine)
+            product_cols = [c['name'] for c in inspector.get_columns('product')]
+            if 'stock' not in product_cols:
+                conn.execute(text('ALTER TABLE product ADD COLUMN stock INT DEFAULT 999'))
+                conn.commit()
+            order_cols = [c['name'] for c in inspector.get_columns('orders')]
+            if 'product_id' not in order_cols:
+                conn.execute(text('ALTER TABLE orders ADD COLUMN product_id INT NULL'))
+                conn.commit()
+
         # 初始化默认管理员账号（仅当管理员表为空时）
         if Admin.query.count() == 0:
             default_admin = Admin(
