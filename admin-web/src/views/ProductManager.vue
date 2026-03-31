@@ -12,6 +12,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="price" label="价格" width="120"><template #default="scope"><span style="color:#f56c6c; font-weight:bold;">¥{{ scope.row.price }}</span></template></el-table-column>
+        <el-table-column prop="stock" label="库存" width="80"><template #default="scope"><el-tag :type="scope.row.stock > 10 ? 'success' : scope.row.stock > 0 ? 'warning' : 'danger'">{{ scope.row.stock }}</el-tag></template></el-table-column>
         <el-table-column label="状态" width="100"><template #default="scope"><el-tag :type="scope.row.is_on_sale ? 'success' : 'info'">{{ scope.row.is_on_sale ? '销售中' : '已下架' }}</el-tag></template></el-table-column>
         <el-table-column label="操作" width="220"><template #default="scope"><el-button size="small" type="primary" plain @click="openEditDialog(scope.row)">编辑</el-button><el-button size="small" :type="scope.row.is_on_sale ? 'warning' : 'success'" @click="toggleStatus(scope.row)">{{ scope.row.is_on_sale ? '下架' : '上架' }}</el-button><el-button size="small" type="danger" :icon="Delete" circle @click="deleteProduct(scope.row)" /></template></el-table-column>
       </el-table>
@@ -28,6 +29,7 @@
           </el-checkbox-group>
         </el-form-item>
         <el-form-item label="价格"><el-input-number v-model="form.price" :min="0" :precision="2" /></el-form-item>
+        <el-form-item label="库存"><el-input-number v-model="form.stock" :min="0" :step="10" /></el-form-item>
         <el-form-item label="商品简介"><el-input v-model="form.description" type="textarea" rows="3" placeholder="请输入商品详细介绍..." /></el-form-item>
         <el-form-item label="图片">
           <el-upload class="avatar-uploader" action="http://localhost:5000/api/upload" :show-file-list="false" :on-success="handleUploadSuccess" :on-error="handleUploadError" name="file">
@@ -51,7 +53,7 @@ import { Plus, Delete } from '@element-plus/icons-vue'
 const productList = ref([])
 const dialogVisible = ref(false)
 const isEditMode = ref(false)
-const form = reactive({ id: 0, title: '', price: 99.0, img: '', category: [], description: '' })
+const form = reactive({ id: 0, title: '', price: 99.0, img: '', category: [], description: '', stock: 999 })
 
 const loadProducts = async () => {
     try {
@@ -60,8 +62,8 @@ const loadProducts = async () => {
     } catch(e) { ElMessage.error('加载商品失败') }
 }
 
-const openAddDialog = () => { isEditMode.value = false; form.title = ''; form.price = 99.0; form.img = ''; form.category = []; form.description = ''; dialogVisible.value = true }
-const openEditDialog = (row) => { isEditMode.value = true; Object.assign(form, row); form.price = parseFloat(row.price); form.category = row.category ? row.category.split(',') : []; form.description = row.description || ''; dialogVisible.value = true }
+const openAddDialog = () => { isEditMode.value = false; form.title = ''; form.price = 99.0; form.img = ''; form.category = []; form.description = ''; form.stock = 999; dialogVisible.value = true }
+const openEditDialog = (row) => { isEditMode.value = true; Object.assign(form, row); form.price = parseFloat(row.price); form.category = row.category ? row.category.split(',') : []; form.description = row.description || ''; form.stock = row.stock ?? 999; dialogVisible.value = true }
 
 const setRandomProductImage = () => { form.img = `https://picsum.photos/400/400?random=${Math.random()}` }
 const handleUploadSuccess = (res) => { if (res.code === 200) form.img = res.url; else ElMessage.error('失败') }

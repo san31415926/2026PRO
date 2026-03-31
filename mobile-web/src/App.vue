@@ -46,7 +46,7 @@
         <van-empty v-if="filteredGoodsList.length === 0" description="暂无相关商品" />
         <div class="goods-waterfall">
           <div v-for="item in filteredGoodsList" :key="item.id" class="goods-card" @click="openProductDetail(item)">
-             <div class="img-wrapper"><img :src="item.img" /></div>
+             <div class="img-wrapper" style="position:relative;"><img :src="item.img" /><div v-if="item.stock === 0" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;border-radius:8px 8px 0 0;"><span style="color:white;font-size:16px;font-weight:bold;">售罄</span></div></div>
              <div class="info-wrapper">
                <div class="title">{{ item.title }}</div>
                <div class="tags">
@@ -161,7 +161,7 @@
               <van-button v-if="order.status===2" size="small" round color="#ee0a24" @click.stop="confirmOrderReceipt(order)">确认收货</van-button>
               <van-button v-if="order.status===3" size="small" round plain type="warning" @click.stop="openComment(order)">去评价</van-button>
               <van-button v-if="order.status===4" size="small" round plain disabled>已评价</van-button>
-              <span v-if="order.status===1" style="color:gray; font-size:12px;">等待商家发货...</span>
+              <van-button v-if="order.status===1" size="small" round plain type="danger" @click.stop="cancelOrder(order)">取消订单</van-button>
               <span v-if="order.status===5" style="color:#ee0a24; font-size:12px;">待好友成团...</span>
             </div>
           </div>
@@ -264,7 +264,7 @@
                     <van-button v-if="order.status===2" size="small" round color="#ee0a24" @click.stop="confirmOrderReceipt(order)">确认收货</van-button>
                     <van-button v-if="order.status===3" size="small" round plain type="warning" @click.stop="openComment(order)">去评价</van-button>
                     <van-button v-if="order.status===4" size="small" round plain disabled>已评价</van-button>
-                    <span v-if="order.status===1" style="color:gray; font-size:12px;">等待商家发货...</span>
+                    <van-button v-if="order.status===1" size="small" round plain type="danger" @click.stop="cancelOrder(order)">取消订单</van-button>
                     <span v-if="order.status===5" style="color:#ee0a24; font-size:12px;">待好友成团...</span>
                 </div>
             </div>
@@ -299,13 +299,27 @@
                     <h4 style="margin-bottom:10px; border-left:4px solid #ee0a24; padding-left:10px;">商品详情</h4>
                     <p style="color:#666; font-size:14px; line-height:1.6; white-space: pre-wrap;">{{ selectedItem.description || '暂无商品介绍，请联系客服咨询详情。' }}</p>
                 </div>
+
+                <div style="margin-top:20px;">
+                    <h4 style="margin-bottom:10px; border-left:4px solid #ee0a24; padding-left:10px;">用户评价 <span style="font-weight:normal;font-size:13px;color:#999;">（{{ productComments.length }}条）</span></h4>
+                    <div v-if="productComments.length === 0" style="text-align:center;color:#ccc;padding:20px 0;"><van-icon name="comment-o" size="32" /><p style="margin-top:8px;font-size:13px;">暂无评价</p></div>
+                    <div v-for="c in productComments" :key="c.id" style="border-bottom:1px solid #f5f5f5;padding:12px 0;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                            <img :src="c.avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+                            <span style="font-size:13px;font-weight:500;">{{ c.user }}</span>
+                            <van-rate :model-value="c.rating" readonly :size="12" color="#ffd21e" void-color="#eee" style="margin-left:auto;" />
+                        </div>
+                        <p style="font-size:13px;color:#555;margin:0;line-height:1.6;">{{ c.content }}</p>
+                        <p style="font-size:11px;color:#bbb;margin:4px 0 0;">{{ c.date }}</p>
+                    </div>
+                </div>
             </div>
 
             <div style="padding:10px 20px; background:white; display:flex; gap:15px; border-top:1px solid #eee;">
-                <van-button block round color="#ff976a" :disabled="isSeckillItem && isSeckillExpired" @click="handleAddToCart(selectedItem)">加入购物车</van-button>
+                <van-button block round color="#ff976a" :disabled="(isSeckillItem && isSeckillExpired) || selectedItem.stock === 0" @click="handleAddToCart(selectedItem)">加入购物车</van-button>
                 <div class="btn-icon fav" @click.stop="toggleFavorite(selectedItem)" style="width:44px;height:44px;border:1px solid #eee;margin-right:-5px;"><van-icon :name="isFav(selectedItem.id) ? 'like' : 'like-o'" :color="isFav(selectedItem.id) ? '#ee0a24' : '#666'" size="20" /></div>
-                <van-button block round :color="isSeckillItem ? 'linear-gradient(to right, #ff6034, #ee0a24)' : '#ee0a24'" :disabled="isSeckillItem && isSeckillExpired" @click="triggerBuyLogic">
-                    {{ isSeckillItem ? (isSeckillExpired ? '已超时' : '立即秒杀') : (selectedItem.category.includes('拼团') ? '去开团/参团' : '立即购买') }}
+                <van-button block round :color="selectedItem.stock === 0 ? '#ccc' : (isSeckillItem ? 'linear-gradient(to right, #ff6034, #ee0a24)' : '#ee0a24')" :disabled="(isSeckillItem && isSeckillExpired) || selectedItem.stock === 0" @click="triggerBuyLogic">
+                    {{ selectedItem.stock === 0 ? '已售罄' : (isSeckillItem ? (isSeckillExpired ? '已超时' : '立即秒杀') : (selectedItem.category.includes('拼团') ? '去开团/参团' : '立即购买')) }}
                 </van-button>
             </div>
         </div>
@@ -348,6 +362,24 @@
         <div class="card detail-address-card"><div class="icon-side"><van-icon name="location" color="#ee0a24" size="24" /></div><div class="text-side"><div class="addr-title">收货信息</div><div class="addr-text">{{ currentOrderDetail.address }}</div></div></div>
         <div class="card detail-goods-card"><div class="shop-line"><van-icon name="shop-o" /> Smart Mall 自营店</div><div class="goods-row"><img :src="currentOrderDetail.img" /><div class="g-right"><div class="g-title">{{ currentOrderDetail.title }}</div><div class="g-price">¥ {{ currentOrderDetail.amount.toFixed(2) }}</div></div></div><div class="contact-line"><van-button size="small" icon="service-o" round>联系客服</van-button><van-button size="small" icon="phone-o" round>拨打电话</van-button></div></div>
         <div class="card detail-meta"><div class="meta-row"><span>订单编号</span><span>{{ currentOrderDetail.no }}</span></div><div class="meta-row"><span>下单时间</span><span>{{ currentOrderDetail.date }}</span></div><div class="meta-row"><span>支付方式</span><span>在线支付</span></div></div>
+
+        <div v-if="logisticsTraces.length > 0" class="card" style="padding:15px;">
+          <div style="font-weight:600;margin-bottom:12px;">物流轨迹</div>
+          <div v-for="(t, i) in logisticsTraces" :key="i" style="display:flex;gap:12px;margin-bottom:10px;">
+            <div style="display:flex;flex-direction:column;align-items:center;">
+              <div :style="{ width:'10px', height:'10px', borderRadius:'50%', background: i===0 ? '#ee0a24' : '#ddd', marginTop:'4px', flexShrink:0 }"></div>
+              <div v-if="i < logisticsTraces.length-1" style="width:1px;flex:1;background:#eee;min-height:20px;margin-top:2px;"></div>
+            </div>
+            <div style="padding-bottom:10px;">
+              <div :style="{ fontSize:'13px', fontWeight: i===0 ? '600' : 'normal', color: i===0 ? '#333' : '#999' }">{{ t.desc }}</div>
+              <div style="font-size:11px;color:#bbb;margin-top:2px;">{{ t.time }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="currentOrderDetail.status === 1" style="padding:0 0 20px;">
+          <van-button block round plain type="danger" @click="cancelOrder(currentOrderDetail)">取消订单</van-button>
+        </div>
       </div>
     </div>
 
@@ -450,6 +482,7 @@ const isSeckillItem = computed(() => selectedItem.value && selectedItem.value.ca
 
 // 新增：我的优惠券弹窗状态
 const showOwnedCouponsPopup = ref(false)
+const productComments = ref([])
 
 const currentMenu = ref([{text:'热卖',icon:'fire-o',type:'filter',key:'热卖'},{text:'手机',icon:'shopping-cart-o',type:'filter',key:'手机'},{text:'电脑',icon:'desktop-o',type:'filter',key:'电脑'},{text:'数码',icon:'tv-o',type:'filter',key:'数码'},{text:'拼团',icon:'friends-o',type:'filter',key:'拼团'},{text:'秒杀',icon:'clock-o',type:'filter',key:'秒杀'},{text:'领券',icon:'coupon-o',type:'action',act:'coupon'},{text:'更多',icon:'apps-o',type:'action',act:'more'}])
 const moreMenuPool = ref([{text:'充值',icon:'gold-coin-o',type:'action',act:'recharge'},{text:'签到',icon:'gift-o',type:'action',act:'signin'},{text:'平板',icon:'points',type:'filter',key:'平板'},{text:'相机',icon:'photograph',type:'filter',key:'相机'},{text:'耳机',icon:'service-o',type:'filter',key:'耳机'},{text:'手表',icon:'clock',type:'filter',key:'手表'}])
@@ -645,18 +678,22 @@ const toggleAllCheck = (val) => { cartList.value.forEach(item => item.checked = 
 // 代替原来的 handleBuyNow，所有商品点击都走这里
 const handleBuyNow = (item) => openProductDetail(item)
 
-const openProductDetail = (item) => {
+const openProductDetail = async (item) => {
     selectedItem.value = item
     showFavorites.value = false
+    productComments.value = []
 
-    // 如果是秒杀商品，初始化倒计时
     if (item.category.includes('秒杀')) {
         seckillTimeLeft.value = systemConfig.value.seckill_time_limit * 60 * 1000
         isSeckillExpired.value = false
     }
 
-    // 打开通用详情弹窗
     showProductDetail.value = true
+
+    try {
+        const res = await axios.get(`http://localhost:5000/api/products/${item.id}/comments`)
+        if (res.data.code === 200) productComments.value = res.data.data
+    } catch {}
 }
 
 // 🔥 详情页底部的按钮触发逻辑 🔥
@@ -736,6 +773,19 @@ const loadMyOrders = async () => { if(!currentUser.value)return; const res = awa
 const loadAddress = async () => { const res = await axios.get('http://localhost:5000/api/mobile/address'); if(res.data.code===200) { addressList.value=res.data.data; if(addressList.value.length>0 && !selectedAddrId.value) selectedAddrId.value=addressList.value[0].id } }
 const saveAddress = async () => { await axios.post('http://localhost:5000/api/mobile/address', newAddr); showSuccessToast('成功'); loadAddress(); showAddAddrForm.value=false }
 const confirmOrderReceipt = async (order) => { await axios.post(`http://localhost:5000/api/mobile/orders/${order.id}/confirm`); showSuccessToast('完成'); loadMyOrders() }
+const cancelOrder = async (order) => {
+    showDialog({ title: '取消订单', message: '确定取消该订单？金额将退回账户余额', showCancelButton: true }).then(async () => {
+        const res = await axios.post(`http://localhost:5000/api/mobile/orders/${order.id}/cancel`)
+        if (res.data.code === 200) {
+            showSuccessToast('已取消，余额已退回')
+            if (currentUser.value) currentUser.value.balance = res.data.balance
+            showOrderDetail.value = false
+            loadMyOrders()
+        } else {
+            showToast(res.data.msg)
+        }
+    }).catch(() => {})
+}
 const viewOrderDetail = async (id) => { showLoadingToast('加载...'); try { const res = await axios.get(`http://localhost:5000/api/mobile/orders/${id}`); const logRes = await axios.get(`http://localhost:5000/api/mobile/orders/${id}/logistics`); if(res.data.code===200) { currentOrderDetail.value=res.data.data; logisticsTraces.value = logRes.data.data || []; showOrderDetail.value=true } } finally { closeToast() } }
 const toggleFavorite = async (item) => {
     if(!currentUser.value) return showToast('请登录');

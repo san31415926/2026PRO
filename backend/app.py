@@ -88,8 +88,9 @@ class Product(db.Model):
     price = db.Column(db.Numeric(10, 2))
     cover_img = db.Column(db.String(255))
     category = db.Column(db.String(200), default='其他')
-    description = db.Column(db.String(1000))  # 增加长度以支持更多介绍
+    description = db.Column(db.String(1000))
     is_on_sale = db.Column(db.Boolean, default=True)
+    stock = db.Column(db.Integer, default=999)
 
 
 class Banner(db.Model):
@@ -164,6 +165,7 @@ class Order(db.Model):
     category = db.Column(db.String(50), default='其他')
     created_at = db.Column(db.DateTime, default=datetime.datetime.now)
     group_team_id = db.Column(db.Integer, nullable=True)
+    product_id = db.Column(db.Integer, nullable=True)
 
 
 class Favorite(db.Model):
@@ -302,7 +304,7 @@ def handle_products():
         # GET 返回 description
         return jsonify({'code': 200, 'data': [
             {'id': p.id, 'title': p.title, 'price': float(p.price), 'img': p.cover_img, 'category': p.category,
-             'description': p.description, 'is_on_sale': p.is_on_sale} for p in products]})
+             'description': p.description, 'is_on_sale': p.is_on_sale, 'stock': p.stock if p.stock is not None else 999} for p in products]})
     try:
         data = request.json
         # POST 接收 description
@@ -311,8 +313,9 @@ def handle_products():
             price=float(data.get('price', 0)),
             cover_img=data.get('img', ''),
             category=data.get('category', '其他'),
-            description=data.get('description', ''),  # 接收简介
-            is_on_sale=True
+            description=data.get('description', ''),
+            is_on_sale=True,
+            stock=int(data.get('stock', 999))
         )
         db.session.add(new_p)
         db.session.commit()
@@ -330,7 +333,9 @@ def modify_product(id):
         p.price = data.get('price')
         p.cover_img = data.get('img')
         p.category = data.get('category')
-        p.description = data.get('description')  # PUT 更新简介
+        p.description = data.get('description')
+        if data.get('stock') is not None:
+            p.stock = int(data.get('stock'))
         db.session.commit()
         return jsonify({'code': 200})
     db.session.delete(p)
@@ -344,6 +349,13 @@ def toggle_status(id):
     p.is_on_sale = not p.is_on_sale
     db.session.commit()
     return jsonify({'code': 200})
+
+
+@app.route('/api/products/<int:id>/comments', methods=['GET'])
+def get_product_comments(id):
+    rows = db.session.query(Comment, Member, Order).join(Order, Comment.order_id == Order.id).join(Member, Comment.user_id == Member.id).filter(Order.product_id == id).order_by(Comment.id.desc()).all()
+    data = [{'id': c.id, 'user': m.nickname, 'avatar': m.avatar, 'rating': c.rating, 'content': c.content, 'date': c.created_at.strftime('%Y-%m-%d')} for c, m, o in rows]
+    return jsonify({'code': 200, 'data': data})
 
 
 # --- 轮播图接口 ---
@@ -508,6 +520,7 @@ def create_order():
     u = Member.query.get(user_id)
     addr = Address.query.get(data.get('address_id'))
     if not addr: return jsonify({'code': 400, 'msg': '请选择地址'})
+    if p.stock is not None and p.stock <= 0: return jsonify({'code': 400, 'msg': '该商品已售罄'})
 
     is_group_item = ('拼团' in p.category) if p.category else False
     is_seckill_item = ('秒杀' in p.category) if p.category else False
@@ -574,9 +587,11 @@ def create_order():
             leader_order = Order.query.filter_by(group_team_id=team.id, status=5).first()
             if leader_order: leader_order.status = 1
 
+    if p.stock is not None:
+        p.stock -= 1
     o = Order(order_no=f"ORD{random.randint(1000, 9999)}", user_id=u.id, product_title=p.title, product_img=p.cover_img,
               total_amount=final, status=order_status, address_snapshot=f"{addr.name} {addr.detail}",
-              category=p.category, group_team_id=team_id)
+              category=p.category, group_team_id=team_id, product_id=p.id)
     db.session.add(o)
     db.session.commit()
 
@@ -640,6 +655,8 @@ def cart_checkout():
         c = Cart.query.get(cid)
         if c:
             p = Product.query.get(c.product_id)
+            if p.stock is not None and p.stock <= 0:
+                return jsonify({'code': 400, 'msg': f'《{p.title}》已售罄，请移除后再结算'})
             discount = 0.9 if user.level == 2 else (0.8 if user.level == 3 else 1)
             amt = float(p.price) * c.num * discount
             total += amt
@@ -675,10 +692,12 @@ def cart_checkout():
     orders = []
     to_del = []
     for i in items:
+        if i['p'].stock is not None:
+            i['p'].stock -= i['c'].num
         orders.append(Order(order_no=f"CT{random.randint(1000, 9999)}", user_id=user.id,
                             product_title=f"{i['p'].title} x{i['c'].num}", product_img=i['p'].cover_img,
                             total_amount=i['amt'], status=1, address_snapshot=f"{addr.name} {addr.detail}",
-                            category=i['p'].category))
+                            category=i['p'].category, product_id=i['p'].id))
         to_del.append(i['c'])
 
     db.session.add_all(orders)
@@ -723,6 +742,42 @@ def ship_order(id):
     o.status = 2
     db.session.commit()
     return jsonify({'code': 200})
+
+
+@app.route('/api/mobile/orders/<int:id>/cancel', methods=['POST'])
+def cancel_order(id):
+    user_id = session.get('user_id')
+    if not user_id: return jsonify({'code': 401, 'msg': '请先登录'})
+    o = Order.query.get(id)
+    if not o or o.user_id != user_id: return jsonify({'code': 400, 'msg': '订单不存在'})
+    if o.status != 1: return jsonify({'code': 400, 'msg': '该订单无法取消'})
+    u = Member.query.get(user_id)
+    u.balance = float(u.balance) + float(o.total_amount)
+    if o.product_id:
+        p = Product.query.get(o.product_id)
+        if p and p.stock is not None:
+            p.stock += 1
+    o.status = 0
+    db.session.commit()
+    return jsonify({'code': 200, 'msg': '已取消', 'balance': float(u.balance)})
+
+
+@app.route('/api/admin/members', methods=['GET'])
+def admin_get_members():
+    members = Member.query.order_by(Member.id.desc()).all()
+    return jsonify({'code': 200, 'data': [
+        {'id': m.id, 'username': m.username, 'nickname': m.nickname, 'level': m.level,
+         'balance': float(m.balance), 'points': m.points, 'avatar': m.avatar} for m in members]})
+
+
+@app.route('/api/admin/member/recharge', methods=['POST'])
+def admin_recharge_member():
+    data = request.json
+    m = Member.query.get(data.get('user_id'))
+    if not m: return jsonify({'code': 400, 'msg': '用户不存在'})
+    m.balance = float(m.balance) + float(data.get('amount', 0))
+    db.session.commit()
+    return jsonify({'code': 200, 'msg': '充值成功', 'balance': float(m.balance)})
 
 
 @app.route('/api/mobile/my_orders', methods=['GET'])
