@@ -116,8 +116,8 @@
       </div>
       <div v-else>
         <div class="user-header-card" :class="{ 'is-vip': isVip }">
-          <div class="user-info" @click="logout">
-            <div style="position:relative; display:inline-block;" @click.stop>
+          <div class="user-info">
+            <div style="position:relative; display:inline-block;">
               <img :src="currentUser.avatar" class="avatar" @click="$refs.avatarInput.click()" style="cursor:pointer;" />
               <div style="position:absolute;bottom:0;right:0;background:rgba(0,0,0,0.45);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;" @click="$refs.avatarInput.click()"><van-icon name="photograph" color="white" size="12" /></div>
               <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="handleAvatarChange" />
@@ -126,7 +126,7 @@
               <div class="nickname">
                 {{ currentUser.nickname }}
                 <van-icon name="edit" style="margin-left: 8px; font-size: 16px; opacity: 0.8;" @click.stop="openEditName" />
-                <span style="font-size:12px; font-weight:normal; margin-left:10px; opacity:0.6; border:1px solid rgba(255,255,255,0.5); padding:0px 6px; border-radius:10px;"><van-icon name="exchange" /> 切换</span>
+                <span style="font-size:12px; font-weight:normal; margin-left:10px; opacity:0.6; border:1px solid rgba(255,255,255,0.5); padding:0px 6px; border-radius:10px; cursor:pointer;" @click.stop="logout"><van-icon name="exchange" /> 切换</span>
               </div>
               <div class="level-badge"><van-icon name="gem" /> {{ vipLevelName }}</div>
             </div>
