@@ -15,7 +15,9 @@ app = Flask(__name__)
 app.secret_key = 'panweiyu_secret_key'
 
 # 数据库配置
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:panweiyu123@localhost/smart_mall'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL', 'mysql+pymysql://root:panweiyu123@localhost/smart_mall'
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 图片上传文件夹配置
