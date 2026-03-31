@@ -117,7 +117,11 @@
       <div v-else>
         <div class="user-header-card" :class="{ 'is-vip': isVip }">
           <div class="user-info" @click="logout">
-            <img :src="currentUser.avatar" class="avatar" />
+            <div style="position:relative; display:inline-block;" @click.stop>
+              <img :src="currentUser.avatar" class="avatar" @click="$refs.avatarInput.click()" style="cursor:pointer;" />
+              <div style="position:absolute;bottom:0;right:0;background:rgba(0,0,0,0.45);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;" @click="$refs.avatarInput.click()"><van-icon name="photograph" color="white" size="12" /></div>
+              <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="handleAvatarChange" />
+            </div>
             <div class="text-info">
               <div class="nickname">
                 {{ currentUser.nickname }}
@@ -243,8 +247,8 @@
     </van-dialog>
 
     <!-- 🔥 新增：全部订单列表弹窗 (含Tabs) 🔥 -->
-    <van-popup v-model:show="showAllOrders" position="bottom" :style="{ height: '100%', background: '#f7f8fa' }" closeable>
-        <van-nav-bar title="我的订单" fixed placeholder z-index="100" />
+    <van-popup v-model:show="showAllOrders" position="bottom" :style="{ height: '100%', background: '#f7f8fa' }">
+        <van-nav-bar title="我的订单" fixed placeholder z-index="100" left-arrow @click-left="showAllOrders=false" />
         <van-tabs v-model:active="activeOrderTab" sticky offset-top="46" background="#fff" color="#ee0a24" title-active-color="#ee0a24">
             <van-tab title="全部" name="all"></van-tab>
             <van-tab title="待发货" name="wait_ship"></van-tab>
@@ -593,11 +597,10 @@ const openMyCoupons = async () => {
         // 这里只是为了刷新数据
     }
 }
-const viewMyWalletCoupons = () => {
+const viewMyWalletCoupons = async () => {
     if(!currentUser.value) return showToast('请登录');
-    openMyCoupons().then(() => {
-        showOwnedCouponsPopup.value = true
-    })
+    await openMyCoupons();
+    showOwnedCouponsPopup.value = true;
 }
 
 const replaceMenuItem = (newItem) => { const moreIndex = currentMenu.value.findIndex(i => i.act === 'more'); const targetIndex = moreIndex > 0 ? moreIndex - 1 : 0; const oldItem = currentMenu.value[targetIndex]; currentMenu.value[targetIndex] = newItem; moreMenuPool.value.push(oldItem); const poolIndex = moreMenuPool.value.indexOf(newItem); if (poolIndex > -1) moreMenuPool.value.splice(poolIndex, 1); showMoreMenu.value = false; showToast(`已切换为 ${newItem.text}`) }
@@ -616,6 +619,22 @@ const onRegister = async () => { const res = await axios.post('http://localhost:
 const logout = () => { showDialog({ title: '提示', message: '确定要切换账号吗？', showCancelButton: true }).then(() => { currentUser.value=null; loginForm.username=''; loginForm.password=''; cartList.value=[]; myOrderList=[]; favoriteList=[]; myUsableCoupons.value=[]; coupons.value.forEach(c=>c.got=false); favIds.value=[]; showSuccessToast('已退出'); activeTab.value = 2; }) }
 const openEditName = () => { editingName.value = currentUser.value.nickname; showEditNameDialog.value = true }
 const submitEditName = async () => { if(!editingName.value) return showToast('昵称不能为空'); const res = await axios.post('http://localhost:5000/api/mobile/profile/update', { nickname: editingName.value }); if(res.data.code===200) { currentUser.value.nickname = editingName.value; showSuccessToast('修改成功') } else showToast(res.data.msg) }
+const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append('file', file);
+    showLoadingToast({ message: '上传中...', forbidClick: true });
+    try {
+        const upRes = await axios.post('http://localhost:5000/api/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+        if (upRes.data.code !== 200) { closeToast(); return showToast('上传失败'); }
+        const url = upRes.data.url;
+        const res = await axios.post('http://localhost:5000/api/mobile/profile/update', { avatar: url });
+        closeToast();
+        if (res.data.code === 200) { currentUser.value.avatar = url; showSuccessToast('头像已更新'); } else showToast(res.data.msg);
+    } catch { closeToast(); showToast('网络错误'); }
+    e.target.value = '';
+}
 const loadData = () => { loadMyOrders(); loadAddress(); loadCart(); loadFavorites(); openMyCoupons(); }
 const loadCart = async () => { if(!currentUser.value) return; const res = await axios.get('http://localhost:5000/api/mobile/cart/list'); if(res.data.code===200) cartList.value = res.data.data.map(i => ({...i, checked: true})) }
 const handleAddToCart = async (item) => { if(!currentUser.value) return showToast('请登录'); const res = await axios.post('http://localhost:5000/api/mobile/cart/add', { product_id: item.id }); if(res.data.code===200) { showSuccessToast('已加购'); loadCart() } }

@@ -216,12 +216,17 @@ def update_profile():
     user_id = session.get('user_id')
     if not user_id: return jsonify({'code': 401, 'msg': '请先登录'})
     user = Member.query.get(user_id)
-    new_nickname = request.json.get('nickname')
+    data = request.json
+    new_nickname = data.get('nickname')
+    new_avatar = data.get('avatar')
     if new_nickname:
         user.nickname = new_nickname
+    if new_avatar:
+        user.avatar = new_avatar
+    if new_nickname or new_avatar:
         db.session.commit()
-        return jsonify({'code': 200, 'msg': '修改成功', 'nickname': user.nickname})
-    return jsonify({'code': 400, 'msg': '昵称不能为空'})
+        return jsonify({'code': 200, 'msg': '修改成功', 'nickname': user.nickname, 'avatar': user.avatar})
+    return jsonify({'code': 400, 'msg': '无修改内容'})
 
 
 @app.route('/api/upload', methods=['POST'])
