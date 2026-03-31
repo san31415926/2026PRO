@@ -1,0 +1,27 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+*.pyc
+__pycache__/
+
+# 上传的图片
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Node
+admin-web/node_modules/
+mobile-web/node_modules/
+node_modules/
+
+# 构建产物
+admin-web/dist/
+mobile-web/dist/
+
+# IDE
+.idea/
+.vscode/
+
+# 系统文件
+.DS_Store
+Thumbs.db
