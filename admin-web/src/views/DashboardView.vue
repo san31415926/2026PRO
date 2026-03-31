@@ -1,217 +1,248 @@
 <template>
-  <div class="dashboard-container">
-    <!-- 顶部 KPI 卡片 -->
-    <el-row :gutter="20" class="kpi-row">
-      <el-col :span="6">
-        <div class="kpi-card purple">
-          <div class="card-icon"><el-icon><Money /></el-icon></div>
-          <div class="card-info">
-            <div class="label">总销售额 (GMV)</div>
-            <div class="value">¥ {{ statsData.sales.toFixed(2) }}</div>
-            <div class="trend">较昨日 <span class="up">+12.5% <el-icon><CaretTop /></el-icon></span></div>
+  <div class="dashboard">
+
+    <!-- KPI 卡片 -->
+    <el-row :gutter="16" class="kpi-row">
+      <el-col :span="6" v-for="k in kpiCards" :key="k.label">
+        <div class="kpi-card" :style="{ borderTop: `4px solid ${k.color}` }">
+          <div class="kpi-top">
+            <span class="kpi-label">{{ k.label }}</span>
+            <el-icon :style="{ color: k.color, fontSize: '24px' }"><component :is="k.icon" /></el-icon>
           </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="kpi-card blue">
-          <div class="card-icon"><el-icon><List /></el-icon></div>
-          <div class="card-info">
-            <div class="label">总订单量</div>
-            <div class="value">{{ statsData.orders }} 单</div>
-            <div class="trend">较昨日 <span class="up">+5.2% <el-icon><CaretTop /></el-icon></span></div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="kpi-card orange">
-          <div class="card-icon"><el-icon><User /></el-icon></div>
-          <div class="card-info">
-            <div class="label">客单价 (AOV)</div>
-            <div class="value">¥ {{ (statsData.sales / (statsData.orders || 1)).toFixed(2) }}</div>
-            <div class="trend">较昨日 <span class="down">-2.1% <el-icon><CaretBottom /></el-icon></span></div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="kpi-card green">
-          <div class="card-icon"><el-icon><Goods /></el-icon></div>
-          <div class="card-info">
-            <div class="label">在售商品数</div>
-            <div class="value">{{ statsData.products }} 件</div>
-            <div class="trend">库存充足</div>
+          <div class="kpi-value" :style="{ color: k.color }">{{ k.value }}</div>
+          <div class="kpi-sub">
+            <span v-if="k.pct !== null && k.pct !== undefined">
+              今日
+              <span :class="k.pct >= 0 ? 'up' : 'down'">
+                {{ k.pct >= 0 ? '▲' : '▼' }} {{ Math.abs(k.pct) }}%
+              </span>
+              vs 昨日
+            </span>
+            <span v-else style="color:#aaa;">{{ k.subText }}</span>
           </div>
         </div>
       </el-col>
     </el-row>
 
-    <!-- 中间：核心趋势图 -->
-    <div class="chart-section">
-        <div class="section-header">
-            <h3>📈 近7天交易趋势</h3>
-            <el-radio-group v-model="trendType" size="small">
-                <el-radio-button label="sales">销售额</el-radio-button>
-                <el-radio-button label="orders">订单量</el-radio-button>
-            </el-radio-group>
+    <!-- 趋势图 -->
+    <el-card class="chart-card" shadow="never">
+      <template #header>
+        <div class="chart-header">
+          <span class="chart-title">📈 近 7 天交易趋势</span>
+          <el-radio-group v-model="trendMode" size="small" @change="renderTrend">
+            <el-radio-button value="sales">销售额</el-radio-button>
+            <el-radio-button value="orders">订单量</el-radio-button>
+            <el-radio-button value="both">双轴对比</el-radio-button>
+          </el-radio-group>
         </div>
-        <div id="main-trend-chart" style="width: 100%; height: 350px;"></div>
-    </div>
+      </template>
+      <div ref="trendChartRef" style="height:300px;"></div>
+    </el-card>
 
-    <!-- 底部：排行榜与占比 -->
-    <el-row :gutter="20" style="margin-top: 20px;">
-        <el-col :span="14">
-            <el-card shadow="hover" class="rank-card">
-                <template #header>
-                    <div class="card-header"><span>🏆 商品热销榜 Top 5</span><el-tag type="danger" size="small">实时</el-tag></div>
-                </template>
-                <el-table :data="hotProducts" style="width: 100%" :show-header="false">
-                    <el-table-column type="index" width="50">
-                        <template #default="scope">
-                            <span :class="['rank-index', 'rank-'+(scope.$index+1)]">{{ scope.$index + 1 }}</span>
-                        </template>
-                    </el-table-column>
-                    <el-table-column width="60">
-                        <template #default="scope"><img :src="scope.row.img" alt="商品图片" style="width:40px;height:40px;border-radius:4px;object-fit:cover;"></template>
-                    </el-table-column>
-                    <el-table-column prop="title" min-width="200" show-overflow-tooltip />
-                    <el-table-column width="150" align="right">
-                        <template #default="scope">
-                            <div style="font-weight:bold;">{{ scope.row.count }} 件</div>
-                            <div style="color:gray;font-size:12px;">¥ {{ scope.row.amount }}</div>
-                        </template>
-                    </el-table-column>
-                </el-table>
-            </el-card>
-        </el-col>
-        <el-col :span="10">
-            <el-card shadow="hover">
-                 <template #header><span>📊 订单状态分布</span></template>
-                 <div id="pie-chart" style="width:100%;height:300px;"></div>
-            </el-card>
-        </el-col>
+    <!-- 中层：分类销售 + 订单状态 -->
+    <el-row :gutter="16" style="margin-top:16px;">
+      <el-col :span="14">
+        <el-card shadow="never" style="height:320px;">
+          <template #header><span class="chart-title">📦 各分类销售额排行</span></template>
+          <div ref="barChartRef" style="height:240px;"></div>
+        </el-card>
+      </el-col>
+      <el-col :span="10">
+        <el-card shadow="never" style="height:320px;">
+          <template #header><span class="chart-title">🗂 订单状态分布</span></template>
+          <div ref="pieChartRef" style="height:240px;"></div>
+        </el-card>
+      </el-col>
     </el-row>
+
+    <!-- 底层：热销榜 + 会员分布 + 低库存 -->
+    <el-row :gutter="16" style="margin-top:16px;">
+      <el-col :span="10">
+        <el-card shadow="never">
+          <template #header>
+            <div class="chart-header"><span class="chart-title">🏆 热销商品 Top 5</span><el-tag type="danger" size="small">实时</el-tag></div>
+          </template>
+          <div v-for="(item, idx) in stats.hot_data" :key="idx" class="hot-row">
+            <span class="hot-rank" :class="['r'+( idx+1)]">{{ idx + 1 }}</span>
+            <img :src="item.img" class="hot-img" />
+            <div class="hot-info">
+              <div class="hot-title">{{ item.title }}</div>
+              <div class="hot-meta">{{ item.count }} 单 · ¥{{ item.amount }}</div>
+            </div>
+            <el-progress :percentage="Math.round(item.count / (stats.hot_data[0]?.count||1) * 100)"
+              :show-text="false" :stroke-width="6" style="width:80px;" />
+          </div>
+          <el-empty v-if="!stats.hot_data?.length" description="暂无订单数据" :image-size="60" />
+        </el-card>
+      </el-col>
+
+      <el-col :span="7">
+        <el-card shadow="never">
+          <template #header><span class="chart-title">👥 会员等级分布</span></template>
+          <div ref="levelChartRef" style="height:220px;"></div>
+        </el-card>
+      </el-col>
+
+      <el-col :span="7">
+        <el-card shadow="never">
+          <template #header>
+            <div class="chart-header">
+              <span class="chart-title">⚠️ 低库存预警</span>
+              <el-tag type="warning" size="small">库存 &lt; 10</el-tag>
+            </div>
+          </template>
+          <div v-if="!stats.low_stock?.length" style="text-align:center;color:#aaa;padding:40px 0;">库存充足，无预警</div>
+          <div v-for="item in stats.low_stock" :key="item.id" class="stock-row">
+            <img :src="item.img" class="hot-img" />
+            <div class="hot-info">
+              <div class="hot-title">{{ item.title }}</div>
+              <el-tag :type="item.stock === 0 ? 'danger' : 'warning'" size="small">库存 {{ item.stock }}</el-tag>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import axios from 'axios'
 import * as echarts from 'echarts'
-import { Money, List, User, Goods, CaretTop, CaretBottom } from '@element-plus/icons-vue'
+import { Money, List, User, Goods, StarFilled, Van } from '@element-plus/icons-vue'
 
-const statsData = ref({ sales: 0, orders: 0, products: 0 })
-const hotProducts = ref([])
-const trendType = ref('sales')
+const stats = ref({})
+const trendMode = ref('both')
+const trendChartRef = ref(null)
+const barChartRef = ref(null)
+const pieChartRef = ref(null)
+const levelChartRef = ref(null)
 
-const loadStats = async () => {
-    const res = await axios.get('http://localhost:5000/api/admin/stats');
-    if (res.data.code === 200) {
-        statsData.value = res.data.data;
+const kpiCards = computed(() => {
+  const s = stats.value
+  if (!s.total_orders && s.total_orders !== 0) return []
+  return [
+    { label: '累计销售额 (GMV)', value: `¥ ${s.total_sales?.toFixed(2) ?? '0.00'}`, color: '#6366f1', icon: 'Money', pct: s.sales_pct, subText: '' },
+    { label: '今日订单量', value: `${s.today_orders ?? 0} 单`, color: '#0ea5e9', icon: 'List', pct: s.orders_pct, subText: '' },
+    { label: '客单价 (AOV)', value: `¥ ${s.aov ?? '0.00'}`, color: '#f59e0b', icon: 'Money', pct: null, subText: `待发货 ${s.pending_ship ?? 0} 单` },
+    { label: '注册会员数', value: `${s.total_members ?? 0} 人`, color: '#10b981', icon: 'User', pct: null, subText: `评价均分 ${s.avg_rating ?? 0} ⭐` },
+  ]
+})
 
-        // 模拟热销数据 (基于真实订单统计)
-        const orderRes = await axios.get('http://localhost:5000/api/admin/orders')
-        if (orderRes.data.code === 200) {
-            const orders = orderRes.data.data
-            // 简单统计热销
-            const productCounts = {}
-            orders.forEach(o => {
-                if(!productCounts[o.title]) productCounts[o.title] = { title: o.title, img: o.img, count: 0, amount: 0 }
-                productCounts[o.title].count += 1
-                productCounts[o.title].amount += o.amount
-            })
-            hotProducts.value = Object.values(productCounts).sort((a,b) => b.count - a.count).slice(0, 5)
-
-            // 渲染订单状态饼图
-            const statusCounts = { '待发货': 0, '已发货': 0, '已完成': 0 }
-            orders.forEach(o => {
-                if(o.status === 1 || o.status === 5) statusCounts['待发货']++
-                else if(o.status === 2) statusCounts['已发货']++
-                else statusCounts['已完成']++
-            })
-            const pieData = Object.keys(statusCounts).map(k => ({name: k, value: statusCounts[k]}))
-
-            await nextTick();
-            initDashboardCharts(res.data.data.chart, pieData)
-        }
-    }
+const renderTrend = () => {
+  const s = stats.value
+  if (!s.trend_dates || !trendChartRef.value) return
+  const chart = echarts.getInstanceByDom(trendChartRef.value) || echarts.init(trendChartRef.value)
+  const series = []
+  const yAxis = []
+  if (trendMode.value === 'sales' || trendMode.value === 'both') {
+    yAxis.push({ type: 'value', name: '销售额(¥)', position: 'left', axisLabel: { formatter: v => `¥${v}` } })
+    series.push({ name: '销售额', type: 'line', smooth: true, yAxisIndex: 0,
+      areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(99,102,241,0.3)'},{offset:1,color:'rgba(99,102,241,0)'}]) },
+      data: s.trend_sales, itemStyle: { color: '#6366f1' }, lineStyle: { width: 3 } })
+  }
+  if (trendMode.value === 'orders' || trendMode.value === 'both') {
+    yAxis.push({ type: 'value', name: '订单量', position: trendMode.value === 'both' ? 'right' : 'left' })
+    series.push({ name: '订单量', type: 'bar', yAxisIndex: trendMode.value === 'both' ? 1 : 0,
+      data: s.trend_orders, itemStyle: { color: '#0ea5e9', borderRadius: [4,4,0,0] }, barMaxWidth: 40 })
+  }
+  chart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+    legend: { top: 0 },
+    grid: { left: 60, right: 60, bottom: 30, top: 40 },
+    xAxis: { type: 'category', data: s.trend_dates, axisLine: { lineStyle: { color: '#eee' } } },
+    yAxis,
+    series
+  }, true)
 }
 
-const initDashboardCharts = (categoryData, pieData) => {
-  // 1. 趋势图 (模拟数据)
-  const lineDom = document.getElementById('main-trend-chart');
-  if (lineDom) {
-      echarts.getInstanceByDom(lineDom)?.dispose();
-      const lineChart = echarts.init(lineDom);
-      // 模拟近7天日期
-      const dates = Array.from({length:7}, (_,i) => {
-          const d = new Date(); d.setDate(d.getDate() - (6-i)); return `${d.getMonth()+1}-${d.getDate()}`
-      })
-      const mockSales = [1200, 1450, 1100, 1800, 2400, 2100, statsData.value.sales || 3000] // 模拟数据+真实总额
-
-      lineChart.setOption({
-          tooltip: { trigger: 'axis' },
-          grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-          xAxis: { type: 'category', boundaryGap: false, data: dates },
-          yAxis: { type: 'value' },
-          series: [
-            {
-                name: '销售趋势',
-                type: 'line',
-                smooth: true,
-                areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(64,158,255,0.3)'},{offset:1,color:'rgba(64,158,255,0)'}]) },
-                data: mockSales,
-                itemStyle: { color: '#409EFF' }
-            }
-          ]
-      })
-  }
-
-  // 2. 饼图
-  const pieDom = document.getElementById('pie-chart');
-  if (pieDom) {
-      echarts.getInstanceByDom(pieDom)?.dispose();
-      const pieChart = echarts.init(pieDom);
-      pieChart.setOption({
-          tooltip: { trigger: 'item' },
-          legend: { bottom: '5%', left: 'center' },
-          series: [{
-              name: '订单状态',
-              type: 'pie',
-              radius: ['40%', '70%'],
-              avoidLabelOverlap: false,
-              itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-              label: { show: false, position: 'center' },
-              emphasis: { label: { show: true, fontSize: 20, fontWeight: 'bold' } },
-              data: pieData
-          }]
-      })
-  }
+const renderBar = () => {
+  const s = stats.value
+  if (!s.category_data?.length || !barChartRef.value) return
+  const chart = echarts.getInstanceByDom(barChartRef.value) || echarts.init(barChartRef.value)
+  const sorted = [...s.category_data].sort((a, b) => a.sales - b.sales)
+  chart.setOption({
+    tooltip: { trigger: 'axis', formatter: p => `${p[0].name}<br/>销售额：¥${p[0].value}` },
+    grid: { left: 80, right: 20, top: 10, bottom: 20 },
+    xAxis: { type: 'value', axisLabel: { formatter: v => `¥${v}` } },
+    yAxis: { type: 'category', data: sorted.map(d => d.name) },
+    series: [{ type: 'bar', data: sorted.map(d => d.sales), barMaxWidth: 22,
+      itemStyle: { borderRadius: [0,4,4,0],
+        color: new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'#6366f1'},{offset:1,color:'#a5b4fc'}]) },
+      label: { show: true, position: 'right', formatter: p => `¥${p.value}` } }]
+  })
 }
 
-onMounted(() => {
-    loadStats()
+const renderPie = () => {
+  const s = stats.value
+  if (!s.status_data?.length || !pieChartRef.value) return
+  const chart = echarts.getInstanceByDom(pieChartRef.value) || echarts.init(pieChartRef.value)
+  const colors = { '待发货': '#f59e0b', '运输中': '#0ea5e9', '待评价': '#8b5cf6', '已完成': '#10b981', '已取消': '#ef4444', '拼团中': '#f97316' }
+  chart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c} 单 ({d}%)' },
+    legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10 },
+    series: [{ type: 'pie', radius: ['45%', '72%'], center: ['50%', '45%'],
+      itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+      data: s.status_data.map(d => ({ ...d, itemStyle: { color: colors[d.name] } })) }]
+  })
+}
+
+const renderLevel = () => {
+  const s = stats.value
+  if (!s.level_data?.length || !levelChartRef.value) return
+  const chart = echarts.getInstanceByDom(levelChartRef.value) || echarts.init(levelChartRef.value)
+  const colors = { '普通会员': '#94a3b8', '黄金VIP': '#f59e0b', '钻石VIP': '#6366f1' }
+  chart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c} 人 ({d}%)' },
+    legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10 },
+    series: [{ type: 'pie', radius: ['40%', '68%'], center: ['50%', '43%'],
+      itemStyle: { borderRadius: 5, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+      data: s.level_data.map(d => ({ ...d, itemStyle: { color: colors[d.name] ?? '#ccc' } })) }]
+  })
+}
+
+onMounted(async () => {
+  const res = await axios.get('http://localhost:5000/api/admin/stats')
+  if (res.data.code === 200) {
+    stats.value = res.data.data
+    await nextTick()
+    renderTrend()
+    renderBar()
+    renderPie()
+    renderLevel()
+  }
 })
 </script>
 
 <style scoped>
-/* Dashboard Styles */
-.kpi-row { margin-bottom: 20px; }
-.kpi-card { background: white; border-radius: 8px; padding: 20px; display: flex; align-items: center; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1); transition: transform 0.3s; }
-.kpi-card:hover { transform: translateY(-5px); }
-.kpi-card .card-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin-right: 15px; color: white; }
-.kpi-card.purple .card-icon { background: #8e44ad; }
-.kpi-card.blue .card-icon { background: #2980b9; }
-.kpi-card.orange .card-icon { background: #f39c12; }
-.kpi-card.green .card-icon { background: #27ae60; }
-.kpi-card .card-info .label { font-size: 14px; color: #999; margin-bottom: 5px; }
-.kpi-card .card-info .value { font-size: 24px; font-weight: bold; color: #333; margin-bottom: 5px; }
-.kpi-card .card-info .trend { font-size: 12px; color: #666; }
-.kpi-card .trend .up { color: #f56c6c; font-weight: bold; }
-.kpi-card .trend .down { color: #67c23a; font-weight: bold; }
-
-.chart-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.rank-index { display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 50%; background: #f0f2f5; font-size: 12px; font-weight: bold; }
-.rank-1 { background: #f56c6c; color: white; }
-.rank-2 { background: #e6a23c; color: white; }
-.rank-3 { background: #409eff; color: white; }
+.dashboard { padding-bottom: 20px; }
+.kpi-row { margin-bottom: 16px; }
+.kpi-card { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 8px rgba(0,0,0,0.07); transition: box-shadow .2s; }
+.kpi-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
+.kpi-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.kpi-label { font-size: 13px; color: #888; }
+.kpi-value { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+.kpi-sub { font-size: 12px; color: #999; }
+.up { color: #ef4444; font-weight: 600; }
+.down { color: #10b981; font-weight: 600; }
+.chart-card { margin-bottom: 0; }
+.chart-header { display: flex; justify-content: space-between; align-items: center; }
+.chart-title { font-size: 14px; font-weight: 600; color: #333; }
+.hot-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+.hot-row:last-child { border-bottom: none; }
+.hot-rank { width: 22px; height: 22px; border-radius: 50%; background: #f0f2f5; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.r1 { background: #ef4444; color: #fff; }
+.r2 { background: #f97316; color: #fff; }
+.r3 { background: #f59e0b; color: #fff; }
+.hot-img { width: 38px; height: 38px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+.hot-info { flex: 1; min-width: 0; }
+.hot-title { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hot-meta { font-size: 12px; color: #999; margin-top: 2px; }
+.stock-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+.stock-row:last-child { border-bottom: none; }
 </style>

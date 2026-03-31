@@ -855,13 +855,80 @@ def delete_comment(id):
 
 @app.route('/api/admin/stats', methods=['GET'])
 def get_stats():
-    total_sales = db.session.query(func.sum(Order.total_amount)).scalar() or 0
+    today = datetime.date.today()
+    yesterday = today - datetime.timedelta(days=1)
+
+    # 基础 KPI
+    total_sales = float(db.session.query(func.sum(Order.total_amount)).scalar() or 0)
     total_orders = Order.query.count()
-    total_products = Product.query.count()
-    cat_stats = db.session.query(Order.category, func.sum(Order.total_amount)).group_by(Order.category).all()
-    return jsonify({'code': 200,
-                    'data': {'sales': float(total_sales), 'orders': total_orders, 'products': total_products,
-                             'chart': [{'name': c, 'value': float(a)} for c, a in cat_stats if c]}})
+    total_products = Product.query.filter_by(is_on_sale=True).count()
+    total_members = Member.query.count()
+
+    # 今日 vs 昨日
+    today_sales = float(db.session.query(func.sum(Order.total_amount)).filter(func.date(Order.created_at) == today).scalar() or 0)
+    yest_sales  = float(db.session.query(func.sum(Order.total_amount)).filter(func.date(Order.created_at) == yesterday).scalar() or 0)
+    today_orders = Order.query.filter(func.date(Order.created_at) == today).count()
+    yest_orders  = Order.query.filter(func.date(Order.created_at) == yesterday).count()
+    today_members = Member.query.filter(func.date(Member.id > 0)).count()  # 占位，下面用注册日期
+    new_members_today = 0  # Member 无注册时间字段，以0代替
+
+    # 近 7 天每日数据
+    trend_sales, trend_orders, trend_dates = [], [], []
+    for i in range(6, -1, -1):
+        d = today - datetime.timedelta(days=i)
+        s = float(db.session.query(func.sum(Order.total_amount)).filter(func.date(Order.created_at) == d).scalar() or 0)
+        c = Order.query.filter(func.date(Order.created_at) == d).count()
+        trend_sales.append(round(s, 2))
+        trend_orders.append(c)
+        trend_dates.append(f'{d.month}/{d.day}')
+
+    # 分类销售额 Top 8
+    cat_stats = db.session.query(Order.category, func.sum(Order.total_amount), func.count(Order.id))\
+        .group_by(Order.category).order_by(func.sum(Order.total_amount).desc()).limit(8).all()
+    category_data = [{'name': c or '其他', 'sales': round(float(a), 2), 'orders': int(n)} for c, a, n in cat_stats if c]
+
+    # 订单状态分布
+    status_map = {0: '已取消', 1: '待发货', 2: '运输中', 3: '待评价', 4: '已完成', 5: '拼团中'}
+    status_rows = db.session.query(Order.status, func.count(Order.id)).group_by(Order.status).all()
+    status_data = [{'name': status_map.get(s, f'状态{s}'), 'value': int(c)} for s, c in status_rows]
+
+    # 待发货订单数
+    pending_ship = Order.query.filter_by(status=1).count()
+
+    # 低库存商品 (库存 < 10)
+    low_stock = Product.query.filter(Product.stock < 10, Product.is_on_sale == True).order_by(Product.stock.asc()).limit(5).all()
+    low_stock_data = [{'id': p.id, 'title': p.title, 'stock': p.stock, 'img': p.cover_img} for p in low_stock]
+
+    # 热销商品 Top 5
+    hot = db.session.query(Order.product_title, Order.product_img, func.count(Order.id).label('cnt'), func.sum(Order.total_amount).label('amt'))\
+        .group_by(Order.product_title, Order.product_img).order_by(func.count(Order.id).desc()).limit(5).all()
+    hot_data = [{'title': t, 'img': img, 'count': int(c), 'amount': round(float(a), 2)} for t, img, c, a in hot]
+
+    # 会员等级分布
+    level_rows = db.session.query(Member.level, func.count(Member.id)).group_by(Member.level).all()
+    level_data = [{'name': ['', '普通会员', '黄金VIP', '钻石VIP'][l] if l <= 3 else f'等级{l}', 'value': int(c)} for l, c in level_rows]
+
+    # 评价均分
+    avg_rating = float(db.session.query(func.avg(Comment.rating)).scalar() or 0)
+
+    def pct(a, b):
+        if b == 0: return None
+        return round((a - b) / b * 100, 1)
+
+    return jsonify({'code': 200, 'data': {
+        'total_sales': total_sales, 'total_orders': total_orders,
+        'total_products': total_products, 'total_members': total_members,
+        'today_sales': today_sales, 'yest_sales': yest_sales,
+        'today_orders': today_orders, 'yest_orders': yest_orders,
+        'sales_pct': pct(today_sales, yest_sales),
+        'orders_pct': pct(today_orders, yest_orders),
+        'aov': round(total_sales / total_orders, 2) if total_orders else 0,
+        'pending_ship': pending_ship, 'avg_rating': round(avg_rating, 1),
+        'trend_dates': trend_dates, 'trend_sales': trend_sales, 'trend_orders': trend_orders,
+        'category_data': category_data, 'status_data': status_data,
+        'hot_data': hot_data, 'low_stock': low_stock_data, 'level_data': level_data,
+        'chart': [{'name': c or '其他', 'value': round(float(a), 2)} for c, a, n in cat_stats if c]
+    }})
 
 
 @app.route('/api/mobile/recharge', methods=['POST'])
