@@ -32,7 +32,7 @@
           </div>
         </el-header>
         <el-main class="main-content">
-          <DashboardView v-if="activeMenu === 'dashboard'" />
+          <DashboardView v-if="activeMenu === 'dashboard'" @navigate="handleMenuSelect" />
           <BannerManager v-if="activeMenu === 'banners'" />
           <ProductManager v-if="activeMenu === 'goods'" />
           <OrderManager v-if="activeMenu === 'orders'" />

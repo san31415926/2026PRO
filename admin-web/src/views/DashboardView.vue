@@ -4,7 +4,7 @@
     <!-- KPI 卡片 -->
     <el-row :gutter="16" class="kpi-row">
       <el-col :span="6" v-for="k in kpiCards" :key="k.label">
-        <div class="kpi-card" :style="{ borderTop: `4px solid ${k.color}` }">
+        <div class="kpi-card" :style="{ borderTop: `4px solid ${k.color}`, cursor: k.link ? 'pointer' : 'default' }" @click="k.link && emit('navigate', k.link)">
           <div class="kpi-top">
             <span class="kpi-label">{{ k.label }}</span>
             <el-icon :style="{ color: k.color, fontSize: '24px' }"><component :is="k.icon" /></el-icon>
@@ -62,7 +62,7 @@
           <template #header>
             <div class="chart-header"><span class="chart-title">🏆 热销商品 Top 5</span><el-tag type="danger" size="small">实时</el-tag></div>
           </template>
-          <div v-for="(item, idx) in stats.hot_data" :key="idx" class="hot-row">
+          <div v-for="(item, idx) in stats.hot_data" :key="idx" class="hot-row" style="cursor:pointer;" @click="emit('navigate','goods')">
             <span class="hot-rank" :class="['r'+( idx+1)]">{{ idx + 1 }}</span>
             <img :src="item.img" class="hot-img" />
             <div class="hot-info">
@@ -92,7 +92,7 @@
             </div>
           </template>
           <div v-if="!stats.low_stock?.length" style="text-align:center;color:#aaa;padding:40px 0;">库存充足，无预警</div>
-          <div v-for="item in stats.low_stock" :key="item.id" class="stock-row">
+          <div v-for="item in stats.low_stock" :key="item.id" class="stock-row" style="cursor:pointer;" @click="emit('navigate','goods')">
             <img :src="item.img" class="hot-img" />
             <div class="hot-info">
               <div class="hot-title">{{ item.title }}</div>
@@ -112,6 +112,8 @@ import axios from 'axios'
 import * as echarts from 'echarts'
 import { Money, List, User, Goods, StarFilled, Van } from '@element-plus/icons-vue'
 
+const emit = defineEmits(['navigate'])
+
 const stats = ref({})
 const trendMode = ref('both')
 const trendChartRef = ref(null)
@@ -123,10 +125,10 @@ const kpiCards = computed(() => {
   const s = stats.value
   if (!s.total_orders && s.total_orders !== 0) return []
   return [
-    { label: '累计销售额 (GMV)', value: `¥ ${s.total_sales?.toFixed(2) ?? '0.00'}`, color: '#6366f1', icon: 'Money', pct: s.sales_pct, subText: '' },
-    { label: '今日订单量', value: `${s.today_orders ?? 0} 单`, color: '#0ea5e9', icon: 'List', pct: s.orders_pct, subText: '' },
-    { label: '客单价 (AOV)', value: `¥ ${s.aov ?? '0.00'}`, color: '#f59e0b', icon: 'Money', pct: null, subText: `待发货 ${s.pending_ship ?? 0} 单` },
-    { label: '注册会员数', value: `${s.total_members ?? 0} 人`, color: '#10b981', icon: 'User', pct: null, subText: `评价均分 ${s.avg_rating ?? 0} ⭐` },
+    { label: '累计销售额 (GMV)', value: `¥ ${s.total_sales?.toFixed(2) ?? '0.00'}`, color: '#6366f1', icon: 'Money', pct: s.sales_pct, subText: '', link: 'orders' },
+    { label: '今日订单量', value: `${s.today_orders ?? 0} 单`, color: '#0ea5e9', icon: 'List', pct: s.orders_pct, subText: '', link: 'orders' },
+    { label: '客单价 (AOV)', value: `¥ ${s.aov ?? '0.00'}`, color: '#f59e0b', icon: 'Money', pct: null, subText: `待发货 ${s.pending_ship ?? 0} 单`, link: 'orders' },
+    { label: '注册会员数', value: `${s.total_members ?? 0} 人`, color: '#10b981', icon: 'User', pct: null, subText: `评价均分 ${s.avg_rating ?? 0} ⭐`, link: 'members' },
   ]
 })
 
@@ -162,6 +164,8 @@ const renderBar = () => {
   if (!s.category_data?.length || !barChartRef.value) return
   const chart = echarts.getInstanceByDom(barChartRef.value) || echarts.init(barChartRef.value)
   const sorted = [...s.category_data].sort((a, b) => a.sales - b.sales)
+  chart.off('click')
+  chart.on('click', () => emit('navigate', 'goods'))
   chart.setOption({
     tooltip: { trigger: 'axis', formatter: p => `${p[0].name}<br/>销售额：¥${p[0].value}` },
     grid: { left: 80, right: 20, top: 10, bottom: 20 },
@@ -179,6 +183,8 @@ const renderPie = () => {
   if (!s.status_data?.length || !pieChartRef.value) return
   const chart = echarts.getInstanceByDom(pieChartRef.value) || echarts.init(pieChartRef.value)
   const colors = { '待发货': '#f59e0b', '运输中': '#0ea5e9', '待评价': '#8b5cf6', '已完成': '#10b981', '已取消': '#ef4444', '拼团中': '#f97316' }
+  chart.off('click')
+  chart.on('click', () => emit('navigate', 'orders'))
   chart.setOption({
     tooltip: { trigger: 'item', formatter: '{b}: {c} 单 ({d}%)' },
     legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10 },
