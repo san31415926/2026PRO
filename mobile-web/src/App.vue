@@ -254,6 +254,7 @@
           <van-cell-group inset>
             <van-cell title="我的会员" :value="vipLevelName" icon="gem-o" is-link @click="openVipCenter" />
             <van-cell title="我的地址" icon="location-o" is-link @click="showAddressManager=true" />
+            <van-cell title="修改密码" icon="shield-o" is-link @click="openChangePasswordDialog" />
             <van-cell title="余额充值" icon="gold-coin-o" is-link @click="openRecharge" />
             <van-cell title="我的收藏" icon="like-o" is-link @click="showFavorites=true; loadFavorites()" />
           </van-cell-group>
@@ -650,6 +651,13 @@
     </van-popup>
     <van-dialog v-model:show="showCommentDialog" title="商品评价" show-cancel-button @confirm="submitComment"><div style="padding:20px;text-align:center;"><van-rate v-model="commentForm.rating" :size="30" color="#ffd21e" void-icon="star" void-color="#eee" /><van-field v-model="commentForm.content" rows="3" autosize label="" type="textarea" placeholder="请输入您的使用心得..." class="beauty-input" style="margin-top:15px;" /></div></van-dialog>
     <van-dialog v-model:show="showEditNameDialog" title="修改昵称" show-cancel-button @confirm="submitEditName"><div style="padding: 20px;"><van-field v-model="editingName" placeholder="请输入新昵称" class="beauty-input" /></div></van-dialog>
+    <van-dialog v-model:show="showChangePasswordDialog" title="修改密码" show-cancel-button @confirm="submitChangePassword">
+      <div style="padding: 20px;">
+        <van-field v-model="changePasswordForm.old_password" type="password" label="原密码" placeholder="请输入原密码" class="beauty-input" />
+        <van-field v-model="changePasswordForm.new_password" type="password" label="新密码" placeholder="至少 6 位" class="beauty-input" />
+        <van-field v-model="changePasswordForm.confirm_password" type="password" label="确认密码" placeholder="请再次输入新密码" class="beauty-input" />
+      </div>
+    </van-dialog>
     <van-dialog v-model:show="showEditHeroDialog" title="修改文案" show-cancel-button @confirm="submitEditHeroText"><div style="padding: 20px;"><van-field v-model="editingHeroText" maxlength="20" show-word-limit placeholder="请输入文案" class="beauty-input" /><div style="margin-top:8px;font-size:12px;color:#999;">最多 20 个字，超出不允许保存。</div></div></van-dialog>
     <van-dialog v-model:show="showPhonePopup" class-name="mall-dialog" title="拨打电话" show-cancel-button confirm-button-text="立刻拨打" @confirm="callServicePhone">
       <div style="padding: 20px; text-align: center;">
@@ -710,6 +718,7 @@ const showCommentDialog = ref(false); const commentForm = reactive({order_id: nu
 const showFavorites = ref(false); const favoriteList = ref([])
 const lastPaidAmount = ref(0)
 const showEditNameDialog = ref(false); const editingName = ref('')
+const showChangePasswordDialog = ref(false); const changePasswordForm = reactive({old_password:'', new_password:'', confirm_password:''})
 const HERO_TEXT_MAX = 20
 const DEFAULT_HERO_TEXT = '鸟为什么会飞'
 const showEditHeroDialog = ref(false); const editingHeroText = ref(DEFAULT_HERO_TEXT); const heroText = ref(DEFAULT_HERO_TEXT)
@@ -1000,6 +1009,24 @@ const onRegister = async () => {
 const logout = () => { showDialog({ title: '提示', message: '确定要切换账号吗？', showCancelButton: true }).then(() => { currentUser.value=null; heroText.value = DEFAULT_HERO_TEXT; loginForm.username=''; loginForm.password=''; cartList.value=[]; myOrderList=[]; favoriteList=[]; myUsableCoupons.value=[]; coupons.value.forEach(c=>c.got=false); favIds.value=[]; showSuccessToast('已退出'); activeTab.value = 2; }) }
 const openEditName = () => { editingName.value = currentUser.value.nickname; showEditNameDialog.value = true }
 const submitEditName = async () => { if(!editingName.value) return showToast('昵称不能为空'); const res = await axios.post('http://localhost:5000/api/mobile/profile/update', { nickname: editingName.value }); if(res.data.code===200) { currentUser.value.nickname = editingName.value; showSuccessToast('修改成功') } else showToast(res.data.msg) }
+const resetChangePasswordForm = () => { changePasswordForm.old_password=''; changePasswordForm.new_password=''; changePasswordForm.confirm_password='' }
+const openChangePasswordDialog = () => { resetChangePasswordForm(); showChangePasswordDialog.value = true }
+const submitChangePassword = async () => {
+    if(!changePasswordForm.old_password || !changePasswordForm.new_password || !changePasswordForm.confirm_password) return showToast('请填写完整信息')
+    if(changePasswordForm.new_password.length < 6) return showToast('新密码至少 6 位')
+    if(changePasswordForm.new_password !== changePasswordForm.confirm_password) return showToast('两次输入的新密码不一致')
+    const res = await axios.post('http://localhost:5000/api/mobile/profile/password', {
+      old_password: changePasswordForm.old_password,
+      new_password: changePasswordForm.new_password
+    })
+    if(res.data.code===200) {
+      showChangePasswordDialog.value = false
+      resetChangePasswordForm()
+      showSuccessToast('密码已更新')
+    } else {
+      showToast(res.data.msg)
+    }
+}
 const openEditHeroText = () => { editingHeroText.value = heroText.value; showEditHeroDialog.value = true }
 const submitEditHeroText = () => {
     const text = (editingHeroText.value || '').trim()

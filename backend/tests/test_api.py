@@ -150,6 +150,22 @@ class TestAuth:
             newcomer_coupon = SystemCoupon.query.filter(SystemCoupon.name.like('%新人%')).first()
             assert newcomer_coupon.stock == 998
 
+    def test_change_password_success(self, client):
+        login(client)
+        res = client.post('/api/mobile/profile/password',
+                          json={'old_password': '123456', 'new_password': '654321'})
+        assert res.json['code'] == 200
+        relogin = client.post('/api/mobile/login',
+                              json={'username': 'user1', 'password': '654321'})
+        assert relogin.json['code'] == 200
+
+    def test_change_password_rejects_wrong_old_password(self, client):
+        login(client)
+        res = client.post('/api/mobile/profile/password',
+                          json={'old_password': 'wrong', 'new_password': '654321'})
+        assert res.json['code'] == 400
+        assert '原密码' in res.json['msg']
+
 
 class TestProducts:
     def test_get_products(self, client):

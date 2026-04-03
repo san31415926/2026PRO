@@ -354,6 +354,28 @@ def update_profile():
     return jsonify({'code': 400, 'msg': '没有可更新的内容'})
 
 
+@app.route('/api/mobile/profile/password', methods=['POST'])
+def update_password():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'code': 401, 'msg': '请先登录'})
+    user = Member.query.get(user_id)
+    data = request.json or {}
+    old_password = (data.get('old_password') or '').strip()
+    new_password = (data.get('new_password') or '').strip()
+    if not old_password or not new_password:
+        return jsonify({'code': 400, 'msg': '请填写完整密码信息'})
+    if user.password != old_password:
+        return jsonify({'code': 400, 'msg': '原密码不正确'})
+    if len(new_password) < 6:
+        return jsonify({'code': 400, 'msg': '新密码至少 6 位'})
+    if new_password == old_password:
+        return jsonify({'code': 400, 'msg': '新密码不能与原密码相同'})
+    user.password = new_password
+    db.session.commit()
+    return jsonify({'code': 200, 'msg': '密码修改成功'})
+
+
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files: return jsonify({'code': 400, 'msg': '未检测到文件'})
