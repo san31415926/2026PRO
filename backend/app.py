@@ -11,7 +11,9 @@ from bootstrap import initialize_app_data
 from extensions import db
 from models import Admin, Address, Banner, Cart, Comment, Favorite, GroupTeam, Member, Order, Product, SystemConfig, SystemCoupon, UserCoupon
 from routes.account_routes import register_account_routes
+from routes.coupon_routes import register_coupon_routes
 from routes.member_routes import register_member_routes
+from routes.product_routes import register_product_routes
 from utils.product_utils import format_dt, get_effective_product_price, get_effective_product_stock, get_seckill_status, get_user_seckill_order_count, has_explicit_seckill_config, is_group_product, is_seckill_product, parse_dt, serialize_product
 
 # --- 1. 鍒濆鍖栭厤缃?---
@@ -29,7 +31,9 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 
 db.init_app(app)
 register_account_routes(app, UPLOAD_FOLDER)
+register_coupon_routes(app)
 register_member_routes(app)
+register_product_routes(app)
 
 
 # --- 2. 璺ㄥ煙閰嶇疆 ---
@@ -59,178 +63,6 @@ def after_request(response):
 
 
 # --- 3. 鎺ュ彛閫昏緫 ---
-
-# --- 鍟嗗搧鎺ュ彛 (淇敼锛氬鍔?description 瀛楁) ---
-@app.route('/api/products', methods=['GET', 'POST'])
-def handle_products():
-    if request.method == 'GET':
-        products = Product.query.order_by(Product.id.desc()).all()
-        return jsonify({'code': 200, 'data': [serialize_product(p) for p in products]})
-    try:
-        data = request.json
-        new_p = Product(
-            title=data.get('title', '未命名商品'),
-            price=float(data.get('price', 0)),
-            cover_img=data.get('img', ''),
-            category=data.get('category', '鍏朵粬'),
-            description=data.get('description', ''),
-            is_on_sale=True,
-            stock=int(data.get('stock', 999)),
-            is_seckill=bool(data.get('is_seckill')),
-            seckill_price=float(data.get('seckill_price')) if data.get('seckill_price') not in (None, '') else None,
-            seckill_stock=int(data.get('seckill_stock', 0) or 0),
-            seckill_limit_per_user=int(data.get('seckill_limit_per_user', 1) or 1),
-            seckill_start_at=parse_dt(data.get('seckill_start_at')),
-            seckill_end_at=parse_dt(data.get('seckill_end_at'))
-        )
-        db.session.add(new_p)
-        db.session.commit()
-        return jsonify({'code': 200, 'msg': '鍙戝竷鎴愬姛'})
-    except Exception as e:
-        return jsonify({'code': 500, 'msg': '鍙戝竷澶辫触'})
-
-
-@app.route('/api/products/<int:id>', methods=['PUT', 'DELETE'])
-def modify_product(id):
-    p = Product.query.get(id)
-    if request.method == 'PUT':
-        data = request.json
-        p.title = data.get('title')
-        p.price = data.get('price')
-        p.cover_img = data.get('img')
-        p.category = data.get('category')
-        p.description = data.get('description')
-        if data.get('stock') is not None:
-            p.stock = int(data.get('stock'))
-        p.is_seckill = bool(data.get('is_seckill'))
-        p.seckill_price = float(data.get('seckill_price')) if data.get('seckill_price') not in (None, '') else None
-        p.seckill_stock = int(data.get('seckill_stock', 0) or 0)
-        p.seckill_limit_per_user = int(data.get('seckill_limit_per_user', 1) or 1)
-        p.seckill_start_at = parse_dt(data.get('seckill_start_at'))
-        p.seckill_end_at = parse_dt(data.get('seckill_end_at'))
-        db.session.commit()
-        return jsonify({'code': 200})
-    db.session.delete(p)
-    db.session.commit()
-    return jsonify({'code': 200})
-
-
-@app.route('/api/products/<int:id>/status', methods=['POST'])
-def toggle_status(id):
-    p = Product.query.get(id)
-    p.is_on_sale = not p.is_on_sale
-    db.session.commit()
-    return jsonify({'code': 200})
-
-
-@app.route('/api/products/<int:id>/comments', methods=['GET'])
-def get_product_comments(id):
-    rows = db.session.query(Comment, Member, Order).join(Order, Comment.order_id == Order.id).join(Member, Comment.user_id == Member.id).filter(Order.product_id == id).order_by(Comment.id.desc()).all()
-    data = [{'id': c.id, 'user': m.nickname, 'avatar': m.avatar, 'rating': c.rating, 'content': c.content, 'date': c.created_at.strftime('%Y-%m-%d')} for c, m, o in rows]
-    return jsonify({'code': 200, 'data': data})
-
-
-# --- 杞挱鍥炬帴鍙?---
-@app.route('/api/banners', methods=['GET', 'POST'])
-def handle_banners():
-    if request.method == 'GET':
-        banners = Banner.query.all()
-        return jsonify({'code': 200, 'data': [{'id': b.id, 'img': b.img, 'note': b.note} for b in banners]})
-    data = request.json
-    db.session.add(Banner(img=data['img'], note=data.get('note', '')))
-    db.session.commit()
-    return jsonify({'code': 200})
-
-
-@app.route('/api/banners/<int:id>', methods=['DELETE'])
-def delete_banner(id):
-    b = Banner.query.get(id)
-    db.session.delete(b)
-    db.session.commit()
-    return jsonify({'code': 200})
-
-
-# --- 浼樻儬鍒告帴鍙?---
-@app.route('/api/admin/coupons', methods=['GET'])
-def admin_get_coupons():
-    coupons = SystemCoupon.query.all()
-    return jsonify({'code': 200, 'data': [
-        {'id': c.id, 'name': c.name, 'amount': float(c.amount), 'min_spend': float(c.min_spend),
-         'limit_level': c.limit_level, 'stock': c.stock} for c in coupons]})
-    return jsonify({'code': 200, 'data': [
-        {'id': c.id, 'name': c.name, 'amount': float(c.amount), 'min_spend': float(c.min_spend),
-         'limit_level': c.limit_level, 'stock': c.stock} for c in coupons]})
-
-
-@app.route('/api/admin/coupons', methods=['POST'])
-def admin_add_coupon():
-    data = request.json
-    new_c = SystemCoupon(name=data['name'], amount=float(data['amount']), min_spend=float(data['min_spend']),
-                         limit_level=int(data.get('limit_level', 1)), stock=int(data.get('stock', 100)))
-    db.session.add(new_c)
-    db.session.commit()
-    return jsonify({'code': 200, 'msg': '娣诲姞鎴愬姛'})
-
-
-@app.route('/api/admin/coupons/<int:id>', methods=['PUT'])
-def admin_update_coupon(id):
-    c = SystemCoupon.query.get(id)
-    data = request.json
-    c.name = data['name']
-    c.amount = float(data['amount'])
-    c.min_spend = float(data['min_spend'])
-    c.limit_level = int(data['limit_level'])
-    c.stock = int(data['stock'])
-    db.session.commit()
-    return jsonify({'code': 200})
-
-
-@app.route('/api/admin/coupons/<int:id>', methods=['DELETE'])
-def admin_delete_coupon(id):
-    c = SystemCoupon.query.get(id)
-    db.session.delete(c)
-    db.session.commit()
-    return jsonify({'code': 200})
-
-
-@app.route('/api/mobile/coupon/market', methods=['GET'])
-def get_coupon_market():
-    coupons = SystemCoupon.query.filter(SystemCoupon.stock > 0).all()
-    return jsonify({'code': 200, 'data': [
-        {'id': c.id, 'name': c.name, 'amount': float(c.amount), 'min_spend': float(c.min_spend),
-         'limit_level': c.limit_level, 'desc': (f'满{float(c.min_spend)}可用' if c.min_spend > 0 else '无门槛')} for c in
-        coupons]})
-
-
-@app.route('/api/mobile/coupon/get', methods=['POST'])
-def get_coupon():
-    user_id = session.get('user_id')
-    if not user_id: return jsonify({'code': 401, 'msg': '璇峰厛鐧诲綍'})
-    sys_coupon_id = request.json.get('id')
-    sys_coupon = SystemCoupon.query.get(sys_coupon_id)
-    if not sys_coupon: return jsonify({'code': 400, 'msg': '浼樻儬鍒镐笉瀛樺湪'})
-    if sys_coupon.stock <= 0: return jsonify({'code': 400, 'msg': '手慢了，已抢光'})
-    user = Member.query.get(user_id)
-    if user.level < sys_coupon.limit_level:
-        level_names = {1: '普通会员', 2: '黄金VIP', 3: '钻石VIP'}
-        return jsonify({'code': 400, 'msg': f'浠呴檺 {level_names.get(sys_coupon.limit_level)} 棰嗗彇'})
-    if UserCoupon.query.filter_by(user_id=user_id, sys_coupon_id=sys_coupon.id).first():
-        return jsonify({'code': 400, 'msg': '您已领取过该券'})
-    sys_coupon.stock -= 1
-    db.session.add(
-        UserCoupon(user_id=user_id, sys_coupon_id=sys_coupon.id, name=sys_coupon.name, amount=sys_coupon.amount,
-                   min_spend=sys_coupon.min_spend, status=0))
-    db.session.commit()
-    return jsonify({'code': 200, 'msg': '棰嗗彇鎴愬姛'})
-
-
-@app.route('/api/mobile/coupon/my', methods=['GET'])
-def my_coupons():
-    cs = UserCoupon.query.filter_by(user_id=session.get('user_id'), status=0).all()
-    return jsonify({'code': 200,
-                    'data': [{'id': c.id, 'name': c.name, 'amount': float(c.amount), 'min_spend': float(c.min_spend)}
-                             for c in cs]})
-
 
 @app.route('/api/mobile/order', methods=['POST'])
 def create_order():
