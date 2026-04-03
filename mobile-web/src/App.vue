@@ -700,6 +700,7 @@ import { ref, computed, onMounted, reactive, watch, nextTick } from 'vue'
 import axios from 'axios'
 import { showToast, showDialog, showSuccessToast, showLoadingToast, closeToast } from 'vant'
 import draggable from 'vuedraggable'
+import { DEFAULT_CURRENT_MENU, DEFAULT_HERO_TEXT, DEFAULT_MORE_MENU_POOL, DEFAULT_SYSTEM_CONFIG, HERO_TEXT_MAX } from './constants/appData'
 
 const activeTab = ref(0); const goodsList = ref([]); const currentUser = ref(null)
 const loginTab = ref(0); const loginForm = reactive({username:'', password:''}); const regForm = reactive({username:'', password:''})
@@ -719,12 +720,10 @@ const showFavorites = ref(false); const favoriteList = ref([])
 const lastPaidAmount = ref(0)
 const showEditNameDialog = ref(false); const editingName = ref('')
 const showChangePasswordDialog = ref(false); const changePasswordForm = reactive({old_password:'', new_password:'', confirm_password:''})
-const HERO_TEXT_MAX = 20
-const DEFAULT_HERO_TEXT = '鸟为什么会飞'
 const showEditHeroDialog = ref(false); const editingHeroText = ref(DEFAULT_HERO_TEXT); const heroText = ref(DEFAULT_HERO_TEXT)
 const logisticsTraces = ref([]); const showSigninPopup = ref(false)
 const showPhonePopup = ref(false); const showQQPopup = ref(false)
-const systemConfig = ref({ group_buy_people: 2, seckill_time_limit: 5, group_buy_discount: 0.8 })
+const systemConfig = ref({ ...DEFAULT_SYSTEM_CONFIG })
 const showGroupChoiceDialog = ref(false); const showJoinGroupInput = ref(false); const inputGroupCode = ref(''); const pendingGroupAction = ref(null); const lastOrderGroupCode = ref(null)
 const isGroupBuyMode = ref(false)
 const coupons = ref([])
@@ -757,8 +756,8 @@ const canBuySeckillNow = computed(() => currentSeckillStatus.value === 'active')
 const showOwnedCouponsPopup = ref(false)
 const productComments = ref([])
 
-const currentMenu = ref([{text:'热卖',icon:'fire-o',type:'filter',key:'热卖'},{text:'手机',icon:'shopping-cart-o',type:'filter',key:'手机'},{text:'电脑',icon:'desktop-o',type:'filter',key:'电脑'},{text:'数码',icon:'tv-o',type:'filter',key:'数码'},{text:'拼团',icon:'friends-o',type:'filter',key:'拼团'},{text:'秒杀',icon:'clock-o',type:'filter',key:'秒杀'},{text:'领券',icon:'coupon-o',type:'action',act:'coupon'},{text:'更多',icon:'apps-o',type:'action',act:'more'}])
-const moreMenuPool = ref([{text:'充值',icon:'gold-coin-o',type:'action',act:'recharge'},{text:'签到',icon:'gift-o',type:'action',act:'signin'},{text:'平板',icon:'points',type:'filter',key:'平板'},{text:'相机',icon:'photograph',type:'filter',key:'相机'},{text:'耳机',icon:'service-o',type:'filter',key:'耳机'},{text:'手表',icon:'clock',type:'filter',key:'手表'}])
+const currentMenu = ref(DEFAULT_CURRENT_MENU.map(item => ({ ...item })))
+const moreMenuPool = ref(DEFAULT_MORE_MENU_POOL.map(item => ({ ...item })))
 
 const pageTitle = computed(() => ['Smart Mall', '购物车', '我的', '拼团大厅', '秒杀大厅'][activeTab.value])
 const isVip = computed(() => currentUser.value && currentUser.value.level > 1)
