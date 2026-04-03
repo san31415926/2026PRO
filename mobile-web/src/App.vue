@@ -47,194 +47,61 @@
     />
 
     <!-- ==================== Tab 2: 会员中心 ==================== -->
-    <div v-else-if="activeTab === 2 && !showPaySuccess && !showOrderDetail && !showAllOrders" class="tab-page">
-      <div v-if="!currentUser" class="login-wrapper">
-        <div class="login-card">
-          <div class="login-header"><h3>Smart Mall</h3><p>登录享受更多权益</p></div>
-          <van-tabs v-model:active="loginTab" color="#ee0a24" title-active-color="#ee0a24">
-            <van-tab title="账号登录">
-              <div class="form-body">
-                <van-field v-model="loginForm.username" left-icon="manager" placeholder="请输入账号" class="beauty-input" :border="false" />
-                <van-field v-model="loginForm.password" left-icon="lock" type="password" placeholder="请输入密码" class="beauty-input" :border="false" />
-                <van-button color="linear-gradient(to right, #ff6034, #ee0a24)" round block size="large" @click="onLogin" style="margin-top:20px; box-shadow: 0 4px 12px rgba(238,10,36,0.3);">立即登录</van-button>
-              </div>
-            </van-tab>
-            <van-tab title="快速注册">
-              <div class="form-body">
-                <van-field v-model="regForm.username" left-icon="manager" placeholder="设置新账号" class="beauty-input" :border="false" />
-                <van-field v-model="regForm.password" left-icon="lock" type="password" placeholder="设置新密码" class="beauty-input" :border="false" />
-                <van-button color="#07c160" round block size="large" @click="onRegister" style="margin-top:20px; box-shadow: 0 4px 12px rgba(7,193,96,0.3);">注册领10000元</van-button>
-              </div>
-            </van-tab>
-          </van-tabs>
-        </div>
-      </div>
-      <div v-else>
-        <div class="user-header-card" :class="{ 'is-vip': isVip }">
-          <div class="user-info">
-            <div style="position:relative; display:inline-block;">
-              <img :src="currentUser.avatar" class="avatar" @click="$refs.avatarInput.click()" style="cursor:pointer;" />
-              <div style="position:absolute;bottom:0;right:0;background:rgba(0,0,0,0.45);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;" @click="$refs.avatarInput.click()"><van-icon name="photograph" color="white" size="12" /></div>
-              <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="handleAvatarChange" />
-            </div>
-            <div class="text-info">
-              <div class="nickname">
-                {{ currentUser.nickname }}
-                <van-icon name="edit" style="margin-left: 8px; font-size: 16px; opacity: 0.8;" @click.stop="openEditName" />
-                <span style="font-size:12px; font-weight:normal; margin-left:10px; opacity:0.6; border:1px solid rgba(255,255,255,0.5); padding:0px 6px; border-radius:10px; cursor:pointer;" @click.stop="logout"><van-icon name="exchange" /> 切换</span>
-              </div>
-              <div class="level-badge"><van-icon name="gem" /> {{ vipLevelName }}</div>
-            </div>
-          </div>
-          <div class="member-hero-meta">
-            <div class="hero-desc-row">
-              <div class="hero-desc">{{ heroText }}</div>
-              <van-icon name="edit" class="hero-desc-edit-btn" @click.stop="openEditHeroText" />
-            </div>
-            <div
-              class="hero-desc hero-desc-editable"
-              contenteditable="true"
-              spellcheck="false"
-            >鸟为什么会飞</div>
-          </div>
-        </div>
-        <div class="data-row">
-           <div class="data-item"><div class="num">{{ currentUser.balance.toFixed(2) }}</div><div class="lbl">余额</div></div>
-           <div class="data-item"><div class="num">{{ currentUser.points }}</div><div class="lbl">积分</div></div>
-           <div class="data-item" @click="viewMyWalletCoupons">
-               <div class="num">{{ myUsableCoupons.length }}</div>
-               <div class="lbl">优惠券</div>
-           </div>
-        </div>
-        <div class="member-quick-panel">
-          <div class="member-quick-item">
-            <div class="quick-label">会员状态</div>
-            <div class="quick-value">{{ vipLevelName }}</div>
-          </div>
-          <div class="member-quick-item">
-            <div class="quick-label">待发货</div>
-            <div class="quick-value">{{ myOrderList.filter(o => o.status === 1 || o.status === 5).length }}</div>
-          </div>
-          <div class="member-quick-item">
-            <div class="quick-label">已收藏</div>
-            <div class="quick-value">{{ favIds.length }}</div>
-          </div>
-        </div>
-        <div class="menu-group">
-          <div class="member-section-head">
-            <span class="member-section-title">常用服务</span>
-            <span class="member-section-sub">账户、资产与收藏</span>
-          </div>
-          <van-cell-group inset>
-            <van-cell title="我的会员" :value="vipLevelName" icon="gem-o" is-link @click="openVipCenter" />
-            <van-cell title="我的地址" icon="location-o" is-link @click="showAddressManager=true" />
-            <van-cell title="修改密码" icon="shield-o" is-link @click="openChangePasswordDialog" />
-            <van-cell title="余额充值" icon="gold-coin-o" is-link @click="openRecharge" />
-            <van-cell title="我的收藏" icon="like-o" is-link @click="showFavorites=true; loadFavorites()" />
-          </van-cell-group>
-        </div>
-        <div class="order-section">
-          <!-- 🔥 修改：点击“查看全部”打开独立弹窗 🔥 -->
-          <div class="sec-head" @click="openOrderList"><span class="sec-title">我的订单</span><span class="sec-more">查看全部 ></span></div>
-
-          <div v-if="!myOrderList || myOrderList.length === 0" class="empty-order-box"><van-icon name="orders-o" size="40" color="#ddd" /><p>这里空空如也，快去买点东西吧~</p></div>
-          <!-- 🔥 修改：只显示最近2条，更多请点击全部 🔥 -->
-          <div v-for="order in myOrderList.slice(0, 2)" :key="order.id" class="jd-order-card" @click="viewOrderDetail(order.id)">
-            <div class="card-head"><span class="shop-name"><van-icon name="shop-o" /> Smart Mall 自营店</span><span class="status-txt" :class="'st-'+order.status">{{ getStatusText(order.status) }}</span></div>
-            <div class="card-body"><img :src="order.img" /><div class="info"><div class="p-title">{{ order.title }}</div><div class="p-price">¥ {{ order.amount.toFixed(2) }}</div></div></div>
-            <div class="card-foot">
-              <van-button v-if="order.status===2" size="small" round color="#ee0a24" @click.stop="confirmOrderReceipt(order)">确认收货</van-button>
-              <van-button v-if="order.status===3" size="small" round plain type="warning" @click.stop="openComment(order)">去评价</van-button>
-              <van-button v-if="order.status===4" size="small" round plain disabled>已评价</van-button>
-              <van-button v-if="order.status===1" size="small" round plain type="danger" @click.stop="cancelOrder(order)">取消订单</van-button>
-              <span v-if="order.status===5" style="color:#ee0a24; font-size:12px;">待好友成团...</span>
-            </div>
-          </div>
-        </div>
-        <div style="height: 30px;"></div>
-      </div>
-    </div>
+    <ProfileTab
+      v-else-if="activeTab === 2 && !showPaySuccess && !showOrderDetail && !showAllOrders"
+      v-model:login-tab="loginTab"
+      :current-user="currentUser"
+      :is-vip="isVip"
+      :vip-level-name="vipLevelName"
+      :hero-text="heroText"
+      :login-form="loginForm"
+      :reg-form="regForm"
+      :my-usable-coupons="myUsableCoupons"
+      :my-order-list="myOrderList"
+      :fav-ids="favIds"
+      :on-login="onLogin"
+      :on-register="onRegister"
+      :logout="logout"
+      :open-edit-name="openEditName"
+      :handle-avatar-change="handleAvatarChange"
+      :open-edit-hero-text="openEditHeroText"
+      :view-my-wallet-coupons="viewMyWalletCoupons"
+      :open-vip-center="openVipCenter"
+      :open-change-password-dialog="openChangePasswordDialog"
+      :open-recharge="openRecharge"
+      :open-favorites="openFavoritesPanel"
+      :open-address-manager="openAddressManagerPanel"
+      :open-order-list="openOrderList"
+      :view-order-detail="viewOrderDetail"
+      :confirm-order-receipt="confirmOrderReceipt"
+      :open-comment="openComment"
+      :cancel-order="cancelOrder"
+      :get-status-text="getStatusText"
+    />
 
     <!-- ==================== Tab 3: 拼团大厅 ==================== -->
-    <div v-else-if="activeTab === 3 && !showPaySuccess && !showOrderDetail" class="tab-page activity-page" style="padding-bottom:60px;">
-      <div class="activity-hero group-hero">
-        <div class="activity-kicker">Group Buying Hall</div>
-        <h2 class="activity-title">拼团大厅</h2>
-        <p class="activity-desc">{{ systemConfig.group_buy_people }}人成团 · 享{{ systemConfig.group_buy_discount * 10 }}折优惠 · 越多人越划算</p>
-        <div class="activity-stat-row">
-          <div class="activity-stat-card">
-            <span class="activity-stat-num">{{ filteredGoodsList.length }}</span>
-            <span class="activity-stat-label">可拼商品</span>
-          </div>
-          <div class="activity-stat-card">
-            <span class="activity-stat-num">{{ systemConfig.group_buy_people }}</span>
-            <span class="activity-stat-label">成团人数</span>
-          </div>
-          <div class="activity-stat-card hot">
-            <span class="activity-stat-num">{{ Math.round(systemConfig.group_buy_discount * 100) }}%</span>
-            <span class="activity-stat-label">拼团价率</span>
-          </div>
-        </div>
-      </div>
-      <div class="goods-container activity-list">
-        <div v-for="item in filteredGoodsList" :key="item.id" class="activity-card group-card" @click="openProductDetail(item)">
-           <img :src="item.img" class="activity-card-img" />
-           <div class="activity-card-body">
-             <div class="activity-card-top">
-               <div class="title">{{ item.title }}</div>
-               <div class="tags"><span class="tag blue">{{ systemConfig.group_buy_people }}人团</span><span class="tag gold">多人更省</span></div>
-             </div>
-             <div class="activity-progress-copy">发起拼团后分享给好友，成团即可享受专属折扣。</div>
-             <div class="activity-card-bottom">
-               <div class="price" style="font-size:18px;">¥ {{ (item.price * systemConfig.group_buy_discount).toFixed(0) }} <span class="activity-old-price">¥{{ item.price }}</span></div>
-               <van-button color="linear-gradient(135deg, #ff8652, #e84d2a)" size="small" round>去开团</van-button>
-             </div>
-           </div>
-        </div>
-      </div>
-    </div>
+    <ActivityHallTab
+      v-else-if="activeTab === 3 && !showPaySuccess && !showOrderDetail"
+      mode="group"
+      :system-config="systemConfig"
+      :filtered-goods-list="filteredGoodsList"
+      :open-product-detail="openProductDetail"
+      :get-seckill-status-tag="getSeckillStatusTag"
+      :get-seckill-status-text="getSeckillStatusText"
+      :get-seckill-progress="getSeckillProgress"
+    />
 
     <!-- Tab 4: 秒杀大厅 -->
-    <div v-else-if="activeTab === 4 && !showPaySuccess && !showOrderDetail" class="tab-page activity-page" style="padding-bottom:60px;">
-      <div class="activity-hero seckill-hero">
-        <div class="activity-kicker">Flash Sale</div>
-        <h2 class="activity-title">疯狂秒杀</h2>
-        <p class="activity-desc">限时限量 · 手慢无 · 趁倒计时结束前抢到心仪单品</p>
-        <div class="activity-stat-row">
-          <div class="activity-stat-card">
-            <span class="activity-stat-num">{{ filteredGoodsList.length }}</span>
-            <span class="activity-stat-label">秒杀商品</span>
-          </div>
-          <div class="activity-stat-card">
-            <span class="activity-stat-num">{{ systemConfig.seckill_time_limit }}</span>
-            <span class="activity-stat-label">限时分钟</span>
-          </div>
-          <div class="activity-stat-card hot">
-            <span class="activity-stat-num">HOT</span>
-            <span class="activity-stat-label">火热抢购</span>
-          </div>
-        </div>
-      </div>
-      <div class="goods-container activity-list">
-        <div v-for="item in filteredGoodsList" :key="item.id" class="activity-card seckill-card" @click="openProductDetail(item)">
-           <div class="activity-card-img-shell">
-             <img :src="item.img" class="activity-card-img" />
-             <div class="activity-corner-badge">{{ getSeckillStatusTag(item) }}</div>
-           </div>
-           <div class="activity-card-body">
-             <div class="title" style="font-weight:bold;">{{ item.title }}</div>
-             <div class="activity-progress-copy">限时限量 · 每人限购 {{ item.seckill_limit_per_user || 1 }} 件 · 剩余 {{ item.display_stock }} 件</div>
-             <div class="activity-card-bottom seckill-bottom">
-                <div class="price" style="font-size:18px;">¥ {{ Number(item.display_price ?? item.price).toFixed(2) }} <span class="activity-old-price">¥{{ Number(item.price).toFixed(2) }}</span></div>
-                <van-button :color="item.seckill_status === 'active' ? 'linear-gradient(135deg, #ff7347, #d92f2f)' : '#c8c9cc'" size="small" round>{{ getSeckillStatusText(item) }}</van-button>
-             </div>
-             <div class="activity-progress-bar">
-               <div class="activity-progress-fill" :style="{ width: `${getSeckillProgress(item)}%` }"></div>
-             </div>
-           </div>
-        </div>
-      </div>
-    </div>
+    <ActivityHallTab
+      v-else-if="activeTab === 4 && !showPaySuccess && !showOrderDetail"
+      mode="seckill"
+      :system-config="systemConfig"
+      :filtered-goods-list="filteredGoodsList"
+      :open-product-detail="openProductDetail"
+      :get-seckill-status-tag="getSeckillStatusTag"
+      :get-seckill-status-text="getSeckillStatusText"
+      :get-seckill-progress="getSeckillProgress"
+    />
 
     <!-- 底部导航 -->
     <van-tabbar v-if="!showPaySuccess && !showOrderDetail && !showProductDetail && !showAllOrders" class="mall-tabbar" v-model="activeTab" :active-color="isVip ? '#dda246' : '#ee0a24'" inactive-color="#999">
@@ -286,33 +153,16 @@
       </div>
     </van-dialog>
 
-    <!-- 🔥 新增：全部订单列表弹窗 (含Tabs) 🔥 -->
-    <van-popup v-model:show="showAllOrders" class="sheet-popup mobile-shell-popup" position="bottom" :style="{ height: '100%', background: 'rgba(84, 49, 36, 0.18)' }">
-        <div class="popup-mobile-shell all-orders-shell">
-        <van-nav-bar title="我的订单" fixed placeholder z-index="100" left-arrow @click-left="showAllOrders=false" />
-        <van-tabs v-model:active="activeOrderTab" sticky offset-top="46" background="#fff" color="#ee0a24" title-active-color="#ee0a24">
-            <van-tab title="全部" name="all"></van-tab>
-            <van-tab title="待发货" name="wait_ship"></van-tab>
-            <van-tab title="待收货" name="shipped"></van-tab>
-            <van-tab title="已完成" name="completed"></van-tab>
-        </van-tabs>
-        <div class="popup-mobile-content">
-            <van-empty v-if="filteredAllOrders.length === 0" description="暂无相关订单" />
-            <div v-for="order in filteredAllOrders" :key="order.id" class="jd-order-card" @click="viewOrderDetail(order.id)">
-                <div class="card-head"><span class="shop-name"><van-icon name="shop-o" /> Smart Mall 自营店</span><span class="status-txt" :class="'st-'+order.status">{{ getStatusText(order.status) }}</span></div>
-                <div class="card-body"><img :src="order.img" /><div class="info"><div class="p-title">{{ order.title }}</div><div class="p-price">¥ {{ order.amount.toFixed(2) }}</div></div></div>
-                <div class="card-foot">
-                    <van-button v-if="order.status===2" size="small" round color="#ee0a24" @click.stop="confirmOrderReceipt(order)">确认收货</van-button>
-                    <van-button v-if="order.status===3" size="small" round plain type="warning" @click.stop="openComment(order)">去评价</van-button>
-                    <van-button v-if="order.status===4" size="small" round plain disabled>已评价</van-button>
-                    <van-button v-if="order.status===1" size="small" round plain type="danger" @click.stop="cancelOrder(order)">取消订单</van-button>
-                    <span v-if="order.status===5" style="color:#ee0a24; font-size:12px;">待好友成团...</span>
-                </div>
-            </div>
-            <div style="height:40px; text-align:center; color:#ccc; font-size:12px; line-height:40px;">我是有底线的</div>
-        </div>
-        </div>
-    </van-popup>
+    <AllOrdersPopup
+      v-model:show="showAllOrders"
+      v-model:active-order-tab="activeOrderTab"
+      :filtered-all-orders="filteredAllOrders"
+      :get-status-text="getStatusText"
+      :view-order-detail="viewOrderDetail"
+      :confirm-order-receipt="confirmOrderReceipt"
+      :open-comment="openComment"
+      :cancel-order="cancelOrder"
+    />
 
     <!-- 全商品详情弹窗 -->
     <van-popup v-model:show="showProductDetail" class="sheet-popup mobile-shell-popup" position="bottom" :style="{ height: '100%', background: 'rgba(84, 49, 36, 0.18)' }" closeable>
@@ -572,8 +422,11 @@
 <script setup>
 import { ref, computed, onMounted, reactive, watch, nextTick } from 'vue'
 import { showToast, showDialog, showSuccessToast, showLoadingToast, closeToast } from 'vant'
+import ActivityHallTab from './components/ActivityHallTab.vue'
+import AllOrdersPopup from './components/AllOrdersPopup.vue'
 import CartTab from './components/CartTab.vue'
 import HomeTab from './components/HomeTab.vue'
+import ProfileTab from './components/ProfileTab.vue'
 import { DEFAULT_CURRENT_MENU, DEFAULT_HERO_TEXT, DEFAULT_MORE_MENU_POOL, DEFAULT_SYSTEM_CONFIG, HERO_TEXT_MAX } from './constants/appData'
 import { useAccountCenter } from './composables/useAccountCenter'
 import { useAddressBook } from './composables/useAddressBook'
@@ -907,6 +760,8 @@ const bindOrderDetailContactActions = () => {
     if (buttons[0]) buttons[0].onclick = () => { showQQPopup.value = true }
     if (buttons[1]) buttons[1].onclick = () => { showPhonePopup.value = true }
 }
+const openAddressManagerPanel = () => { showAddressManager.value = true }
+const openFavoritesPanel = () => { showFavorites.value = true; loadFavorites() }
 const callServicePhone = () => {
     showPhonePopup.value = false
     window.location.href = 'tel:86-45224655'
