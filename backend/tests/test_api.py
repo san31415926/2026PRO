@@ -138,6 +138,19 @@ class TestAuth:
 
 # ─────────────────────────── 2. 商品接口 ───────────────────────────
 
+    def test_new_user_receives_newcomer_coupon(self, app, client):
+        r = client.post('/api/mobile/register',
+                        json={'username': 'coupon_fresh', 'password': '123456'})
+        assert r.json['code'] == 200
+        assert r.json['newcomer_coupon_received'] is True
+        login(client, 'coupon_fresh')
+        my_coupon_res = client.get('/api/mobile/coupon/my')
+        assert any('新人' in item['name'] for item in my_coupon_res.json['data'])
+        with app.app_context():
+            newcomer_coupon = SystemCoupon.query.filter(SystemCoupon.name.like('%新人%')).first()
+            assert newcomer_coupon.stock == 998
+
+
 class TestProducts:
     def test_get_products(self, client):
         """获取商品列表"""

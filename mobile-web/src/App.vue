@@ -989,7 +989,14 @@ const submitRecharge = async () => {
   } catch (e) { closeToast(); showToast('网络错误'); }
 }
 const onLogin = async () => { try { const res = await axios.post('http://localhost:5000/api/mobile/login', loginForm); if(res.data.code===200){ currentUser.value=res.data.data; heroText.value = res.data.data.hero_text || DEFAULT_HERO_TEXT; showSuccessToast('欢迎'); loadData(); } else showToast(res.data.msg) } catch(e){showToast('失败')} }
-const onRegister = async () => { const res = await axios.post('http://localhost:5000/api/mobile/register', regForm); if(res.data.code===200){ showSuccessToast('注册成功'); loginTab.value=0; loginForm.username=regForm.username } else showToast(res.data.msg) }
+const onRegister = async () => {
+  const res = await axios.post('http://localhost:5000/api/mobile/register', regForm)
+  if(res.data.code===200){
+    showSuccessToast(res.data.newcomer_coupon_received ? '注册成功，新人券已到账' : '注册成功')
+    loginTab.value=0
+    loginForm.username=regForm.username
+  } else showToast(res.data.msg)
+}
 const logout = () => { showDialog({ title: '提示', message: '确定要切换账号吗？', showCancelButton: true }).then(() => { currentUser.value=null; heroText.value = DEFAULT_HERO_TEXT; loginForm.username=''; loginForm.password=''; cartList.value=[]; myOrderList=[]; favoriteList=[]; myUsableCoupons.value=[]; coupons.value.forEach(c=>c.got=false); favIds.value=[]; showSuccessToast('已退出'); activeTab.value = 2; }) }
 const openEditName = () => { editingName.value = currentUser.value.nickname; showEditNameDialog.value = true }
 const submitEditName = async () => { if(!editingName.value) return showToast('昵称不能为空'); const res = await axios.post('http://localhost:5000/api/mobile/profile/update', { nickname: editingName.value }); if(res.data.code===200) { currentUser.value.nickname = editingName.value; showSuccessToast('修改成功') } else showToast(res.data.msg) }

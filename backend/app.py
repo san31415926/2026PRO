@@ -513,11 +513,37 @@ def delete_banner(id):
 @app.route('/api/mobile/register', methods=['POST'])
 def mobile_register():
     if Member.query.filter_by(username=request.json['username']).first(): return jsonify({'code': 400, 'msg': '账号已存在'})
-    db.session.add(Member(username=request.json['username'], password=request.json['password'],
-                          nickname=f"鐢ㄦ埛{random.randint(100, 999)}", balance=10000.00, points=500,
-                          hero_text='鸟为什么会飞'))
+    user = Member(username=request.json['username'], password=request.json['password'],
+                  nickname=f"鐢ㄦ埛{random.randint(100, 999)}", balance=10000.00, points=500,
+                  hero_text='鸟为什么会飞')
+    db.session.add(user)
+    db.session.flush()
+
+    newcomer_coupon = SystemCoupon.query.filter(SystemCoupon.name.like('%新人%')).order_by(SystemCoupon.id.asc()).first()
+    if not newcomer_coupon:
+        newcomer_coupon = SystemCoupon(name='新人礼券', amount=10.00, min_spend=0.00, limit_level=1, stock=999)
+        db.session.add(newcomer_coupon)
+        db.session.flush()
+    granted_coupon_name = None
+    if newcomer_coupon and newcomer_coupon.stock > 0:
+        newcomer_coupon.stock -= 1
+        db.session.add(UserCoupon(
+            user_id=user.id,
+            sys_coupon_id=newcomer_coupon.id,
+            name=newcomer_coupon.name,
+            amount=newcomer_coupon.amount,
+            min_spend=newcomer_coupon.min_spend,
+            status=0
+        ))
+        granted_coupon_name = newcomer_coupon.name
+
     db.session.commit()
-    return jsonify({'code': 200})
+    return jsonify({
+        'code': 200,
+        'msg': '注册成功',
+        'newcomer_coupon_received': bool(granted_coupon_name),
+        'newcomer_coupon_name': granted_coupon_name
+    })
 
 
 @app.route('/api/mobile/login', methods=['POST'])
