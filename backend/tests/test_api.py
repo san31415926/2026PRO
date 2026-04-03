@@ -7,6 +7,7 @@ SmartMall 后端单元测试
 import pytest
 import sys
 import os
+import datetime
 
 # 必须在 import app 之前设置，否则 SQLAlchemy 已绑定 MySQL URI
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
@@ -55,7 +56,10 @@ def _seed():
     p1 = Product(title='iPhone 15', price=5999.00, cover_img='http://img/1.jpg',
                  category='手机,热卖', description='苹果旗舰手机', is_on_sale=True, stock=100)
     p2 = Product(title='限量秒杀耳机', price=299.00, cover_img='http://img/2.jpg',
-                 category='数码,秒杀', description='秒杀专区', is_on_sale=True, stock=5)
+                 category='数码,秒杀', description='秒杀专区', is_on_sale=True, stock=5,
+                 is_seckill=True, seckill_price=199.00, seckill_stock=5, seckill_limit_per_user=1,
+                 seckill_start_at=datetime.datetime.now() - datetime.timedelta(hours=1),
+                 seckill_end_at=datetime.datetime.now() + datetime.timedelta(hours=1))
     p3 = Product(title='售罄商品', price=99.00, cover_img='http://img/3.jpg',
                  category='数码', description='库存为0', is_on_sale=True, stock=0)
     p4 = Product(title='拼团手机', price=2999.00, cover_img='http://img/4.jpg',
@@ -168,6 +172,13 @@ class TestProducts:
         iphone = next(p for p in products if p['title'] == 'iPhone 15')
         assert iphone['is_on_sale'] is True
 
+    def test_product_has_seckill_fields(self, client):
+        r = client.get('/api/products')
+        seckill_item = next(p for p in r.json['data'] if p['title'] == '限量秒杀耳机')
+        assert seckill_item['is_seckill'] is True
+        assert seckill_item['seckill_status'] == 'active'
+        assert seckill_item['seckill_price'] == 199.0
+
 
 # ─────────────────────────── 3. 购物车 ───────────────────────────
 
@@ -197,6 +208,12 @@ class TestCart:
         client.post('/api/mobile/cart/add', json={'product_id': pid})
         r = client.get('/api/mobile/cart/list')
         assert r.json['data'][0]['num'] == 2
+
+    def test_seckill_product_cannot_add_to_cart(self, app, client):
+        login(client)
+        pid = get_product_id(app, '限量秒杀耳机')
+        r = client.post('/api/mobile/cart/add', json={'product_id': pid})
+        assert r.json['code'] == 400
 
     def test_delete_cart_item(self, app, client):
         """将购物车数量设为 0 等于删除"""
@@ -265,6 +282,44 @@ class TestOrder:
                         json={'product_id': pid, 'address_id': addr_id})
         assert r.json['code'] == 400
         assert '售罄' in r.json['msg']
+
+    def test_seckill_order_uses_seckill_price(self, app, client):
+        login(client)
+        addr_id = self._prepare_address(client)
+        pid = get_product_id(app, '限量秒杀耳机')
+        r = client.post('/api/mobile/order', json={'product_id': pid, 'address_id': addr_id})
+        assert r.json['code'] == 200
+        assert abs(r.json['balance'] - (10000 - 199)) < 0.01
+
+    def test_seckill_order_deducts_seckill_stock(self, app, client):
+        login(client)
+        addr_id = self._prepare_address(client)
+        pid = get_product_id(app, '限量秒杀耳机')
+        client.post('/api/mobile/order', json={'product_id': pid, 'address_id': addr_id})
+        with app.app_context():
+            p = Product.query.filter_by(title='限量秒杀耳机').first()
+            assert p.seckill_stock == 4
+
+    def test_seckill_order_blocks_coupon_and_points(self, app, client):
+        login(client)
+        addr_id = self._prepare_address(client)
+        pid = get_product_id(app, '限量秒杀耳机')
+        coupon_id = get_coupon_id(app, '通用满减券')
+        client.post('/api/mobile/coupon/get', json={'id': coupon_id})
+        my_coupon_id = client.get('/api/mobile/coupon/my').json['data'][0]['id']
+        r = client.post('/api/mobile/order', json={'product_id': pid, 'address_id': addr_id, 'coupon_id': my_coupon_id, 'use_points': True})
+        assert r.json['code'] == 400
+        assert '秒杀商品不支持优惠券和积分' in r.json['msg']
+
+    def test_seckill_order_limit_per_user(self, app, client):
+        login(client)
+        addr_id = self._prepare_address(client)
+        pid = get_product_id(app, '限量秒杀耳机')
+        first = client.post('/api/mobile/order', json={'product_id': pid, 'address_id': addr_id})
+        second = client.post('/api/mobile/order', json={'product_id': pid, 'address_id': addr_id})
+        assert first.json['code'] == 200
+        assert second.json['code'] == 400
+        assert '限购' in second.json['msg']
 
     def test_order_requires_address(self, app, client):
         """未传地址 id 时拒绝下单"""
@@ -463,7 +518,7 @@ class TestStock:
     def test_last_item_can_be_bought(self, app, client):
         """库存为 1 时刚好可以购买"""
         with app.app_context():
-            Product.query.filter_by(title='限量秒杀耳机').update({'stock': 1})
+            Product.query.filter_by(title='限量秒杀耳机').update({'seckill_stock': 1})
             db.session.commit()
         login(client)
         pid = get_product_id(app, '限量秒杀耳机')
@@ -474,12 +529,12 @@ class TestStock:
                         json={'product_id': pid, 'address_id': addr_id})
         assert r.json['code'] == 200
         with app.app_context():
-            assert Product.query.filter_by(title='限量秒杀耳机').first().stock == 0
+            assert Product.query.filter_by(title='限量秒杀耳机').first().seckill_stock == 0
 
     def test_zero_stock_cannot_be_bought(self, app, client):
         """库存变为 0 后无法再购买"""
         with app.app_context():
-            Product.query.filter_by(title='限量秒杀耳机').update({'stock': 0})
+            Product.query.filter_by(title='限量秒杀耳机').update({'seckill_stock': 0})
             db.session.commit()
         login(client)
         pid = get_product_id(app, '限量秒杀耳机')
@@ -546,10 +601,26 @@ class TestAdmin:
                           json={'product_id': pid, 'address_id': addr_id}).json['order_id']
         # 管理员登录并发货
         client.post('/api/admin/login', json={'username': 'admin', 'password': '123456'})
-        r = client.post(f'/api/admin/orders/{oid}/ship')
+        r = client.post(f'/api/admin/orders/{oid}/ship', json={'tracking_no': 'SF1234567890'})
         assert r.json['code'] == 200
         with app.app_context():
             assert Order.query.get(oid).status == 2
+            assert Order.query.get(oid).tracking_no == 'SF1234567890'
+
+    def test_order_logistics_contains_tracking_no(self, app, client):
+        login(client, 'user1')
+        client.post('/api/mobile/address',
+                    json={'name': '收货人', 'phone': '123', 'detail': '地址'})
+        addr_id = client.get('/api/mobile/address').json['data'][0]['id']
+        pid = get_product_id(app, 'iPhone 15')
+        oid = client.post('/api/mobile/order',
+                          json={'product_id': pid, 'address_id': addr_id}).json['order_id']
+        client.post('/api/admin/login', json={'username': 'admin', 'password': '123456'})
+        client.post(f'/api/admin/orders/{oid}/ship', json={'tracking_no': 'YT0001'})
+        r = client.get(f'/api/mobile/orders/{oid}/logistics')
+        assert r.json['code'] == 200
+        assert any('YT0001' in item['desc'] for item in r.json['data'])
+        assert all('time' in item and 'desc' in item for item in r.json['data'])
 
     def test_admin_recharge_member(self, app, client):
         """管理员给会员充值"""
