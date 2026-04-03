@@ -702,11 +702,10 @@ import draggable from 'vuedraggable'
 import { DEFAULT_CURRENT_MENU, DEFAULT_HERO_TEXT, DEFAULT_MORE_MENU_POOL, DEFAULT_SYSTEM_CONFIG, HERO_TEXT_MAX } from './constants/appData'
 import { useAccountCenter } from './composables/useAccountCenter'
 import { useAddressBook } from './composables/useAddressBook'
+import { useCatalogCenter } from './composables/useCatalogCenter'
 import { useEngagementCenter } from './composables/useEngagementCenter'
 import { useGroupPurchase } from './composables/useGroupPurchase'
 import { useOrderCenter } from './composables/useOrderCenter'
-import { signinMobile } from './services/auth'
-import { fetchBanners, fetchProductComments, fetchProducts, fetchSystemConfig } from './services/catalog'
 import { fetchCartList, addCartItem, updateCartItem } from './services/cart'
 
 const activeTab = ref(0); const goodsList = ref([]); const currentUser = ref(null)
@@ -927,6 +926,57 @@ const {
   closeToast,
   loadData,
 })
+const {
+  getSeckillStatusText,
+  getSeckillStatusTag,
+  getSeckillProgress,
+  getCountdownMs,
+  refreshSelectedSeckillState,
+  filteredGoodsList,
+  loadProducts,
+  handleGridClick,
+  handleSignin,
+  openProductDetail,
+  handleBuyNow,
+  triggerBuyLogic,
+  handleSeckillFinish,
+  stopSeckillTimer,
+} = useCatalogCenter({
+  activeTab,
+  goodsList,
+  currentUser,
+  selectedItem,
+  addressList,
+  currentCategory,
+  searchKeyword,
+  bannerList,
+  systemConfig,
+  isGroupBuyMode,
+  showBuyDialog,
+  showFavorites,
+  showProductDetail,
+  showGroupChoiceDialog,
+  productComments,
+  selectedCoupon,
+  usePoints,
+  seckillTimer,
+  seckillTimeLeft,
+  isSeckillExpired,
+  showSigninPopup,
+  selectedItemIsGroup,
+  currentSeckillStatus,
+  canBuySeckillNow,
+  loadAddress,
+  loadFavorites,
+  openMyCoupons,
+  openCouponCenter,
+  openRecharge,
+  showMoreMenu,
+  showDialog,
+  showToast,
+  showLoadingToast,
+  closeToast,
+})
 
 const calcFinal = (basePrice) => {
   let price = Number(basePrice) || 0
@@ -939,74 +989,6 @@ const calcFinal = (basePrice) => {
   if (price < 0) price = 0
   return price.toFixed(2)
 }
-
-const getSeckillStatusText = (item) => {
-  const status = item?.seckill_status || 'none'
-  if (status === 'upcoming') return '即将开抢'
-  if (status === 'active') return '立即秒杀'
-  if (status === 'sold_out') return '已售罄'
-  if (status === 'ended') return '活动结束'
-  return '立即购买'
-}
-
-const getSeckillStatusTag = (item) => {
-  const status = item?.seckill_status || 'none'
-  if (status === 'upcoming') return '即将开始'
-  if (status === 'active') return '秒杀中'
-  if (status === 'sold_out') return '已售罄'
-  if (status === 'ended') return '已结束'
-  return '秒杀'
-}
-
-const getSeckillProgress = (item) => {
-  if (!item?.is_seckill) return 0
-  const total = Number(item.stock || 0)
-  const remain = Number(item.display_stock ?? item.seckill_stock ?? 0)
-  if (total <= 0) return 0
-  return Math.min(100, Math.max(0, Math.round(((total - remain) / total) * 100)))
-}
-
-const getCountdownMs = (dateText) => {
-  if (!dateText) return 0
-  const target = new Date(String(dateText).replace(' ', 'T')).getTime()
-  const diff = target - Date.now()
-  return diff > 0 ? diff : 0
-}
-
-const refreshSelectedSeckillState = () => {
-  if (!selectedItem.value?.is_seckill) return
-  const now = Date.now()
-  const startAt = selectedItem.value.seckill_start_at ? new Date(String(selectedItem.value.seckill_start_at).replace(' ', 'T')).getTime() : null
-  const endAt = selectedItem.value.seckill_end_at ? new Date(String(selectedItem.value.seckill_end_at).replace(' ', 'T')).getTime() : null
-  if (startAt && now < startAt) {
-    selectedItem.value.seckill_status = 'upcoming'
-    seckillTimeLeft.value = startAt - now
-    isSeckillExpired.value = false
-    return
-  }
-  if (endAt && now < endAt) {
-    selectedItem.value.seckill_status = selectedItem.value.display_stock > 0 ? 'active' : 'sold_out'
-    seckillTimeLeft.value = endAt - now
-    isSeckillExpired.value = false
-    return
-  }
-  if (selectedItem.value.display_stock <= 0) {
-    selectedItem.value.seckill_status = 'sold_out'
-  } else {
-    selectedItem.value.seckill_status = 'ended'
-  }
-  seckillTimeLeft.value = 0
-  isSeckillExpired.value = true
-}
-
-const filteredGoodsList = computed(() => {
-  let list = goodsList.value
-  if (searchKeyword.value) list = list.filter(item => item.title.includes(searchKeyword.value))
-  if (activeTab.value === 3) return list.filter(i => i.category.includes('拼团'))
-  if (activeTab.value === 4) return list.filter(i => i.category.includes('秒杀')) // Tab 4 是秒杀大厅
-  if (currentCategory.value === '🔥 爆款推荐') return list
-  return list.filter(i => i.category.includes(currentCategory.value))
-})
 
 // 🔥 核心：订单筛选逻辑 🔥
 const filteredAllOrders = computed(() => {
@@ -1028,27 +1010,6 @@ const getStatusText = (s) => {
     return '未知状态'
 }
 
-const loadProducts = async (isManualRefresh = false) => {
-  if (isManualRefresh) showLoadingToast({ message: '刷新中', forbidClick: true, duration: 0 })
-  try {
-    const res = await fetchProducts()
-    if(res.data.code === 200) goodsList.value = res.data.data.filter(item => item.is_on_sale)
-    const bannerRes = await fetchBanners()
-    if(bannerRes.data.code === 200) bannerList.value = bannerRes.data.data
-    const cfgRes = await fetchSystemConfig()
-    if(cfgRes.data.code === 200) {
-        systemConfig.value.group_buy_people = parseInt(cfgRes.data.data.group_buy_people)
-        systemConfig.value.seckill_time_limit = parseInt(cfgRes.data.data.seckill_time_limit)
-        systemConfig.value.group_buy_discount = parseFloat(cfgRes.data.data.group_buy_discount)
-    }
-    // 🔥 加载收藏列表 🔥
-    if(currentUser.value) {
-        loadFavorites();
-        openMyCoupons(); // 预加载优惠券以显示数量
-    }
-  } catch(e) { console.error(e) }
-  finally { if (isManualRefresh) closeToast() }
-}
 onMounted(loadProducts)
 watch(showOrderDetail, async (visible) => {
   if (!visible) return
@@ -1065,22 +1026,6 @@ watch(showProductDetail, (visible) => {
 const onClickLeft = () => { activeTab.value = 0 }
 
 // 🔥 修改：秒杀点击逻辑，进入大厅 🔥
-const handleGridClick = (item) => {
-  if (item.type === 'filter') {
-      if(item.text === '拼团') { activeTab.value = 3; return }
-      if(item.text === '秒杀') { activeTab.value = 4; return } // 跳转到秒杀大厅 Tab 4
-      currentCategory.value = item.text;
-      searchKeyword.value = '';
-      showToast(`进入 ${item.text}`)
-  }
-  else if (item.type === 'action') { if (item.act === 'coupon') openCouponCenter(); if (item.act === 'recharge') openRecharge(); if (item.act === 'signin') handleSignin(); if (item.act === 'more') showMoreMenu.value = true }
-}
-const handleSignin = async () => {
-  if(!currentUser.value) return showToast('请登录');
-  const res = await signinMobile();
-  if(res.data.code===200){ currentUser.value.points=res.data.points; showSigninPopup.value = true }
-}
-
 const replaceMenuItem = (newItem) => { const moreIndex = currentMenu.value.findIndex(i => i.act === 'more'); const targetIndex = moreIndex > 0 ? moreIndex - 1 : 0; const oldItem = currentMenu.value[targetIndex]; currentMenu.value[targetIndex] = newItem; moreMenuPool.value.push(oldItem); const poolIndex = moreMenuPool.value.indexOf(newItem); if (poolIndex > -1) moreMenuPool.value.splice(poolIndex, 1); showMoreMenu.value = false; showToast(`已切换为 ${newItem.text}`) }
 const bindOrderDetailContactActions = () => {
     const buttons = document.querySelectorAll('.contact-line .van-button')
@@ -1109,66 +1054,6 @@ const handleAddToCart = async (item) => {
 }
 const updateCartNum = async (item, num) => { if (num === undefined) num = item.num; await updateCartItem(item.id, num); loadCart() }
 const toggleAllCheck = (val) => { cartList.value.forEach(item => item.checked = val) }
-
-// 🔥 核心修改：点击商品 -> 打开统一详情页 (openProductDetail) 🔥
-// 代替原来的 handleBuyNow，所有商品点击都走这里
-const handleBuyNow = (item) => openProductDetail(item)
-
-const openProductDetail = async (item) => {
-    selectedItem.value = { ...item }
-    showFavorites.value = false
-    productComments.value = []
-
-    if (item.is_seckill) {
-        if (seckillTimer.value) clearInterval(seckillTimer.value)
-        refreshSelectedSeckillState()
-        seckillTimer.value = setInterval(refreshSelectedSeckillState, 1000)
-    }
-
-    showProductDetail.value = true
-
-    try {
-        const res = await fetchProductComments(item.id)
-        if (res.data.code === 200) productComments.value = res.data.data
-    } catch {}
-}
-
-// 🔥 详情页底部的按钮触发逻辑 🔥
-const triggerBuyLogic = () => {
-    if(!currentUser.value){ showToast('请登录'); showProductDetail.value=false; activeTab.value=2; return }
-
-    const item = selectedItem.value;
-    selectedCoupon.value = null;
-    usePoints.value = false;
-
-    if(item.is_seckill) {
-        if(item.seckill_status === 'upcoming') return showDialog({ message: '秒杀尚未开始，请等待活动开抢。' });
-        if(item.seckill_status === 'sold_out') return showDialog({ message: '当前秒杀商品已售罄，请查看其他商品。' });
-        if(item.seckill_status === 'ended') return showDialog({ message: '当前秒杀活动已结束。' });
-        isGroupBuyMode.value = false;
-        showProductDetail.value = false;
-        showBuyDialog.value = true;
-        if(addressList.value.length===0) loadAddress()
-        return;
-    }
-
-    if(selectedItemIsGroup.value) {
-        isGroupBuyMode.value = true;
-        showProductDetail.value = false;
-        showGroupChoiceDialog.value = true;
-        if(addressList.value.length===0) loadAddress()
-        return;
-    }
-
-    isGroupBuyMode.value = false;
-    showProductDetail.value = false;
-    showBuyDialog.value = true;
-    if(addressList.value.length===0) loadAddress()
-}
-
-const handleSeckillFinish = () => {
-    refreshSelectedSeckillState()
-}
 
 watch(activeTab, (val) => { if(val===1) loadCart(); if(val===2) loadMyOrders() })
 </script>
