@@ -164,84 +164,24 @@
       :cancel-order="cancelOrder"
     />
 
-    <!-- 全商品详情弹窗 -->
-    <van-popup v-model:show="showProductDetail" class="sheet-popup mobile-shell-popup" position="bottom" :style="{ height: '100%', background: 'rgba(84, 49, 36, 0.18)' }" closeable>
-        <div v-if="selectedItem" class="popup-mobile-shell product-detail-shell">
-            <div style="height:350px; position:relative;">
-                <img :src="selectedItem.img" style="width:100%; height:100%; object-fit:cover;">
-                <div v-if="isSeckillItem" class="seckill-bar-modal">
-                    <div class="sk-info"><div class="sk-title">⚡ 疯狂秒杀</div><div class="sk-sub">{{ getSeckillStatusTag(selectedItem) }} · 每人限购 {{ selectedItem.seckill_limit_per_user || 1 }} 件</div></div>
-                    <div class="sk-countdown"><div style="font-size:10px; margin-bottom:2px; opacity:0.8;">{{ currentSeckillStatus === 'upcoming' ? '距开始仅剩' : '距结束仅剩' }}</div><van-count-down :time="seckillTimeLeft" format="DD 天 HH : mm : ss" style="color:#fff000; font-weight:bold; font-size:20px; font-family:monospace;" @finish="handleSeckillFinish" /></div>
-                </div>
-            </div>
-
-            <div class="popup-mobile-content product-detail-content" style="padding:20px; background:white; flex:1; overflow-y:auto;">
-                <div style="font-size:20px; margin-bottom:10px; font-weight:bold; line-height:1.4;">{{ selectedItem.title }}</div>
-                <div style="color:#ee0a24; font-size:28px; font-weight:bold; margin-bottom:15px;">
-                    ¥ {{ Number(selectedItem.display_price ?? selectedItem.price).toFixed(2) }}
-                    <span v-if="isSeckillItem" style="font-size:14px; color:#999; text-decoration:line-through; font-weight:normal; margin-left:10px;">¥{{ Number(selectedItem.price).toFixed(2) }}</span>
-                </div>
-
-                <div v-if="isSeckillItem" style="background:#fff7f7; border:1px solid #ffebeb; padding:15px; border-radius:10px; margin-bottom:20px;">
-                    <div style="font-weight:bold; color:#ee0a24; margin-bottom:5px;"><van-icon name="warning-o" /> 秒杀规则：</div>
-                    <div style="font-size:13px; color:#666; line-height:1.6;">1. 秒杀商品仅可直接购买，不支持加入购物车。<br>2. 每人限购 {{ selectedItem.seckill_limit_per_user || 1 }} 件，当前剩余 {{ selectedItem.display_stock }} 件。<br>3. 秒杀商品不支持优惠券和积分抵扣，活动结束后自动恢复常规展示。</div>
-                </div>
-                <div v-if="isSeckillItem" class="seckill-detail-grid">
-                    <div class="seckill-detail-card">
-                        <div class="seckill-detail-label">活动状态</div>
-                        <div class="seckill-detail-value">{{ getSeckillStatusTag(selectedItem) }}</div>
-                    </div>
-                    <div class="seckill-detail-card">
-                        <div class="seckill-detail-label">每人限购</div>
-                        <div class="seckill-detail-value">{{ selectedItem.seckill_limit_per_user || 1 }} 件</div>
-                    </div>
-                    <div class="seckill-detail-card">
-                        <div class="seckill-detail-label">剩余库存</div>
-                        <div class="seckill-detail-value">{{ selectedItem.display_stock }} 件</div>
-                    </div>
-                    <div class="seckill-detail-card">
-                        <div class="seckill-detail-label">活动时间</div>
-                        <div class="seckill-detail-value mini">{{ selectedItem.seckill_start_at || '立即开始' }} - {{ selectedItem.seckill_end_at || '售完为止' }}</div>
-                    </div>
-                </div>
-
-                <div style="margin-top:10px;">
-                    <h4 style="margin-bottom:10px; border-left:4px solid #ee0a24; padding-left:10px;">商品详情</h4>
-                    <p style="color:#666; font-size:14px; line-height:1.6; white-space: pre-wrap;">{{ selectedItem.description || '暂无商品介绍，请联系客服咨询详情。' }}</p>
-                </div>
-
-                <div style="margin-top:20px;">
-                    <h4 style="margin-bottom:10px; border-left:4px solid #ee0a24; padding-left:10px;">用户评价 <span style="font-weight:normal;font-size:13px;color:#999;">（{{ productComments.length }}条）</span></h4>
-                    <div v-if="productComments.length === 0" style="text-align:center;color:#ccc;padding:20px 0;"><van-icon name="comment-o" size="32" /><p style="margin-top:8px;font-size:13px;">暂无评价</p></div>
-                    <div v-for="c in productComments" :key="c.id" style="border-bottom:1px solid #f5f5f5;padding:12px 0;">
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                            <img :src="c.avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
-                            <span style="font-size:13px;font-weight:500;">{{ c.user }}</span>
-                            <van-rate :model-value="c.rating" readonly :size="12" color="#ffd21e" void-color="#eee" style="margin-left:auto;" />
-                        </div>
-                        <p style="font-size:13px;color:#555;margin:0;line-height:1.6;">{{ c.content }}</p>
-                        <p style="font-size:11px;color:#bbb;margin:4px 0 0;">{{ c.date }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="product-detail-footer" style="padding:10px 20px; background:white; display:flex; gap:15px; border-top:1px solid #eee;">
-                <van-button v-if="!isSeckillItem" block round color="#ff976a" :disabled="selectedItem.stock === 0" @click="handleAddToCart(selectedItem)">加入购物车</van-button>
-                <div class="btn-icon fav" @click.stop="toggleFavorite(selectedItem)" style="width:44px;height:44px;border:1px solid #eee;margin-right:-5px;"><van-icon :name="isFav(selectedItem.id) ? 'like' : 'like-o'" :color="isFav(selectedItem.id) ? '#ee0a24' : '#666'" size="20" /></div>
-                <template v-if="selectedItemIsGroup && !isSeckillItem">
-                    <van-button block round plain color="#ee0a24" :disabled="selectedItem.stock === 0" @click="buyGroupItemDirectly">
-                        {{ selectedItem.stock === 0 ? '已售罄' : '直接购买' }}
-                    </van-button>
-                    <van-button block round color="linear-gradient(135deg, #ff8652, #e84d2a)" :disabled="selectedItem.stock === 0" @click="triggerBuyLogic">
-                        {{ selectedItem.stock === 0 ? '已售罄' : '去开团/参团' }}
-                    </van-button>
-                </template>
-                <van-button v-else block round :color="(isSeckillItem && !canBuySeckillNow) || selectedItem.display_stock === 0 || selectedItem.stock === 0 ? '#ccc' : (isSeckillItem ? 'linear-gradient(to right, #ff6034, #ee0a24)' : '#ee0a24')" :disabled="(isSeckillItem && !canBuySeckillNow) || (isSeckillItem ? selectedItem.display_stock === 0 : selectedItem.stock === 0)" @click="triggerBuyLogic">
-                    {{ isSeckillItem ? getSeckillStatusText(selectedItem) : (selectedItem.stock === 0 ? '已售罄' : '立即购买') }}
-                </van-button>
-            </div>
-        </div>
-    </van-popup>
+    <ProductDetailPopup
+      v-model:show="showProductDetail"
+      :selected-item="selectedItem"
+      :is-seckill-item="isSeckillItem"
+      :selected-item-is-group="selectedItemIsGroup"
+      :current-seckill-status="currentSeckillStatus"
+      :can-buy-seckill-now="canBuySeckillNow"
+      :seckill-time-left="seckillTimeLeft"
+      :product-comments="productComments"
+      :get-seckill-status-tag="getSeckillStatusTag"
+      :get-seckill-status-text="getSeckillStatusText"
+      :handle-seckill-finish="handleSeckillFinish"
+      :handle-add-to-cart="handleAddToCart"
+      :toggle-favorite="toggleFavorite"
+      :is-fav="isFav"
+      :buy-group-item-directly="buyGroupItemDirectly"
+      :trigger-buy-logic="triggerBuyLogic"
+    />
 
     <van-popup v-model:show="showCoupon" class="sheet-popup" position="bottom" round closeable :style="{ height: '60%', background: '#f7f8fa' }">
       <div style="padding: 15px 15px 30px;">
@@ -275,36 +215,15 @@
       </div>
     </div>
 
-    <div v-if="showOrderDetail" class="full-page-detail">
-      <div class="detail-page-shell">
-      <van-nav-bar title="订单详情" left-arrow @click-left="showOrderDetail=false" />
-      <div class="detail-status-header"><div class="status-big"><van-icon name="logistics" size="24" />{{ getStatusText(currentOrderDetail.status) }}</div><div class="status-desc">感谢您在 Smart Mall 购物，欢迎再次光临</div><div class="detail-status-pills"><span class="detail-pill">官方自营</span><span class="detail-pill">物流可追踪</span><span class="detail-pill">售后无忧</span></div></div>
-      <div v-if="currentOrderDetail" class="detail-page-content" style="margin-top: -30px; position: relative; z-index: 2;">
-        <div v-if="currentOrderDetail.group_code" class="card detail-code-card" style="margin-top:-20px;text-align:center;padding:15px;"><div class="detail-code-main">拼团码：{{ currentOrderDetail.group_code }}</div><div class="detail-code-sub">状态：{{ currentOrderDetail.status===5?'待成团':'拼团成功' }}</div></div>
-        <div class="card detail-address-card"><div class="icon-side"><van-icon name="location" color="#ee0a24" size="24" /></div><div class="text-side"><div class="addr-title">收货信息</div><div class="addr-text">{{ currentOrderDetail.address }}</div></div></div>
-        <div class="card detail-goods-card"><div class="shop-line"><van-icon name="shop-o" /> Smart Mall 自营店</div><div class="goods-row"><img :src="currentOrderDetail.img" class="detail-goods-img" /><div class="g-right"><div class="g-title">{{ currentOrderDetail.title }}</div><div class="g-sub">官方直发 · 品质保障 · 支持售后</div><div class="g-price">¥ {{ currentOrderDetail.amount.toFixed(2) }}</div></div></div><div class="contact-line"><van-button size="small" icon="service-o" round>联系客服</van-button><van-button size="small" icon="phone-o" round>拨打电话</van-button></div></div>
-        <div class="card detail-meta"><div class="meta-row"><span>订单编号</span><span>{{ currentOrderDetail.no }}</span></div><div class="meta-row"><span>下单时间</span><span>{{ currentOrderDetail.date }}</span></div><div class="meta-row"><span>支付方式</span><span>在线支付</span></div></div>
-
-        <div v-if="logisticsTraces.length > 0" class="card detail-logistics-card" style="padding:15px;">
-          <div class="detail-logistics-title">物流轨迹</div>
-          <div v-for="(t, i) in logisticsTraces" :key="i" class="detail-logistics-row">
-            <div class="detail-logistics-line">
-              <div :class="['detail-logistics-dot', { active: i===0 }]"></div>
-              <div v-if="i < logisticsTraces.length-1" class="detail-logistics-stick"></div>
-            </div>
-            <div class="detail-logistics-copy">
-              <div :class="['detail-logistics-desc', { active: i===0 }]">{{ t.desc }}</div>
-              <div class="detail-logistics-time">{{ t.time }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="currentOrderDetail.status === 1" class="detail-action-wrap" style="padding:0 0 20px;">
-          <van-button block round plain type="danger" @click="cancelOrder(currentOrderDetail)">取消订单</van-button>
-        </div>
-      </div>
-      </div>
-    </div>
+    <OrderDetailView
+      v-model:show="showOrderDetail"
+      :current-order-detail="currentOrderDetail"
+      :logistics-traces="logisticsTraces"
+      :get-status-text="getStatusText"
+      :cancel-order="cancelOrder"
+      :open-qq-popup="openQQServicePopup"
+      :open-phone-popup="openPhoneServicePopup"
+    />
 
     <van-dialog v-model:show="showRecharge" class-name="mall-dialog" title="余额充值" :show-confirm-button="false">
       <div style="padding:20px; text-align:center;"><van-field v-model="rechargeAmount" type="number" label="充值金额" placeholder="请输入金额" size="large" prefix="¥" class="beauty-input" /><div v-if="rechargeAmount > 0" class="pay-qr-box"><div class="pay-qr-tip">请使用微信或支付宝扫码支付</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=SmartMallRecharge" class="pay-qr-img" /><van-button block round color="linear-gradient(135deg, #24c07b, #07c160)" class="pay-confirm-btn" @click="submitRecharge">我已确认支付</van-button></div></div>
@@ -312,41 +231,13 @@
 
     <van-popup v-model:show="showMyCouponSelector" position="bottom" round :style="{ height: '40%' }"><div style="padding:20px;"><h3 style="text-align:center;">选择优惠券</h3><van-cell-group><van-cell v-for="c in myUsableCoupons" :key="c.id" :title="c.name" :value="`- ¥${c.amount}`" clickable @click="selectedCoupon=c; showMyCouponSelector=false" /><van-cell title="不使用优惠券" clickable @click="selectedCoupon=null; showMyCouponSelector=false" /></van-cell-group></div></van-popup>
     <van-popup v-model:show="showMoreMenu" position="bottom" round :style="{ height: '40%' }"><div style="padding:20px;"><h3 style="text-align:center;margin-bottom:10px;">更多服务</h3><van-grid :column-num="4" clickable><van-grid-item v-for="(item, i) in moreMenuPool" :key="i" :icon="item.icon" :text="item.text" @click="replaceMenuItem(item)" /></van-grid></div></van-popup>
-    <van-popup v-model:show="showAddressManager" position="bottom" :style="{ height: '60%' }">
-      <div style="padding:15px;">
-        <h3>地址管理</h3>
-        <van-radio-group v-model="selectedAddrId">
-          <div
-            v-for="addr in addressList"
-            :key="addr.id"
-            class="addr-box"
-            @click="selectedAddrId=addr.id;showAddressManager=false"
-          >
-            <van-radio :name="addr.id" style="margin-right:10px;"></van-radio>
-            <div class="addr-content">
-              <div class="addr-topline">
-                <b>{{ addr.name }} {{ addr.phone }}</b>
-                <van-tag v-if="addr.is_default" plain type="danger" round>默认地址</van-tag>
-              </div>
-              <span class="addr-detail">{{ addr.detail }}</span>
-              <div class="addr-actions">
-                <van-button
-                  v-if="!addr.is_default"
-                  plain
-                  round
-                  size="small"
-                  type="primary"
-                  @click.stop="setDefaultAddress(addr.id)"
-                >
-                  设为默认
-                </van-button>
-              </div>
-            </div>
-          </div>
-        </van-radio-group>
-        <van-button type="danger" block round style="margin-top:20px;" @click="showAddAddrForm=true">➕ 新增</van-button>
-      </div>
-    </van-popup>
+    <AddressManagerPopup
+      v-model:show="showAddressManager"
+      v-model:selected-addr-id="selectedAddrId"
+      :address-list="addressList"
+      :set-default-address="setDefaultAddress"
+      @open-add-form="showAddAddrForm=true"
+    />
     <van-dialog v-model:show="showAddAddrForm" title="新增地址" show-cancel-button @confirm="saveAddress">
       <van-cell-group inset>
         <van-field v-model="newAddr.name" label="姓名" />
@@ -359,20 +250,11 @@
         </van-cell>
       </van-cell-group>
     </van-dialog>
-    <van-popup v-model:show="showFavorites" position="bottom" round :style="{ height: '60%' }">
-      <div style="padding:20px;">
-        <h3 style="text-align:center;">我的收藏</h3>
-        <div v-if="favoriteList.length===0" style="text-align:center;color:gray;margin-top:50px;">暂无收藏</div>
-        <div v-for="item in favoriteList" :key="item.id" class="fav-item" @click="openProductDetail(item)">
-          <img :src="item.img">
-          <div style="flex:1;">
-            <div class="f-title">{{ item.title }}</div>
-            <div class="f-price">¥ {{ item.price }}</div>
-          </div>
-          <van-icon name="arrow" color="#999" />
-        </div>
-      </div>
-    </van-popup>
+    <FavoritesPopup
+      v-model:show="showFavorites"
+      :favorite-list="favoriteList"
+      :open-product-detail="openProductDetail"
+    />
     <van-dialog v-model:show="showCommentDialog" title="商品评价" show-cancel-button @confirm="submitComment"><div style="padding:20px;text-align:center;"><van-rate v-model="commentForm.rating" :size="30" color="#ffd21e" void-icon="star" void-color="#eee" /><van-field v-model="commentForm.content" rows="3" autosize label="" type="textarea" placeholder="请输入您的使用心得..." class="beauty-input" style="margin-top:15px;" /></div></van-dialog>
     <van-dialog v-model:show="showEditNameDialog" title="修改昵称" show-cancel-button @confirm="submitEditName"><div style="padding: 20px;"><van-field v-model="editingName" placeholder="请输入新昵称" class="beauty-input" /></div></van-dialog>
     <van-dialog v-model:show="showChangePasswordDialog" title="修改密码" show-cancel-button @confirm="submitChangePassword">
@@ -423,10 +305,14 @@
 import { ref, computed, onMounted, reactive, watch, nextTick } from 'vue'
 import { showToast, showDialog, showSuccessToast, showLoadingToast, closeToast } from 'vant'
 import ActivityHallTab from './components/ActivityHallTab.vue'
+import AddressManagerPopup from './components/AddressManagerPopup.vue'
 import AllOrdersPopup from './components/AllOrdersPopup.vue'
 import CartTab from './components/CartTab.vue'
+import FavoritesPopup from './components/FavoritesPopup.vue'
 import HomeTab from './components/HomeTab.vue'
+import OrderDetailView from './components/OrderDetailView.vue'
 import ProfileTab from './components/ProfileTab.vue'
+import ProductDetailPopup from './components/ProductDetailPopup.vue'
 import { DEFAULT_CURRENT_MENU, DEFAULT_HERO_TEXT, DEFAULT_MORE_MENU_POOL, DEFAULT_SYSTEM_CONFIG, HERO_TEXT_MAX } from './constants/appData'
 import { useAccountCenter } from './composables/useAccountCenter'
 import { useAddressBook } from './composables/useAddressBook'
@@ -739,11 +625,6 @@ const getStatusText = (s) => {
 }
 
 onMounted(loadProducts)
-watch(showOrderDetail, async (visible) => {
-  if (!visible) return
-  await nextTick()
-  bindOrderDetailContactActions()
-})
 watch(showProductDetail, (visible) => {
   if (!visible && seckillTimer.value) {
     clearInterval(seckillTimer.value)
@@ -755,13 +636,10 @@ const onClickLeft = () => { activeTab.value = 0 }
 
 // 🔥 修改：秒杀点击逻辑，进入大厅 🔥
 const replaceMenuItem = (newItem) => { const moreIndex = currentMenu.value.findIndex(i => i.act === 'more'); const targetIndex = moreIndex > 0 ? moreIndex - 1 : 0; const oldItem = currentMenu.value[targetIndex]; currentMenu.value[targetIndex] = newItem; moreMenuPool.value.push(oldItem); const poolIndex = moreMenuPool.value.indexOf(newItem); if (poolIndex > -1) moreMenuPool.value.splice(poolIndex, 1); showMoreMenu.value = false; showToast(`已切换为 ${newItem.text}`) }
-const bindOrderDetailContactActions = () => {
-    const buttons = document.querySelectorAll('.contact-line .van-button')
-    if (buttons[0]) buttons[0].onclick = () => { showQQPopup.value = true }
-    if (buttons[1]) buttons[1].onclick = () => { showPhonePopup.value = true }
-}
 const openAddressManagerPanel = () => { showAddressManager.value = true }
 const openFavoritesPanel = () => { showFavorites.value = true; loadFavorites() }
+const openPhoneServicePopup = () => { showPhonePopup.value = true }
+const openQQServicePopup = () => { showQQPopup.value = true }
 const callServicePhone = () => {
     showPhonePopup.value = false
     window.location.href = 'tel:86-45224655'
