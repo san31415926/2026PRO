@@ -235,6 +235,7 @@ class Address(db.Model):
     name = db.Column(db.String(50))
     phone = db.Column(db.String(20))
     detail = db.Column(db.String(200))
+    is_default = db.Column(db.Boolean, default=False)
 
 
 class Cart(db.Model):
@@ -633,14 +634,51 @@ def upgrade_vip():
 
 @app.route('/api/mobile/address', methods=['GET', 'POST'])
 def handle_address():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'code': 401, 'msg': '请先登录'})
     if request.method == 'GET':
-        addrs = Address.query.filter_by(user_id=session.get('user_id')).all()
+        addrs = Address.query.filter_by(user_id=user_id).order_by(Address.id.asc()).all()
+        if addrs and not any(a.is_default for a in addrs):
+            addrs[0].is_default = True
+            db.session.commit()
         return jsonify(
-            {'code': 200, 'data': [{'id': a.id, 'name': a.name, 'phone': a.phone, 'detail': a.detail} for a in addrs]})
-    db.session.add(Address(user_id=session.get('user_id'), name=request.json['name'], phone=request.json['phone'],
-                           detail=request.json['detail']))
+            {'code': 200, 'data': [
+                {'id': a.id, 'name': a.name, 'phone': a.phone, 'detail': a.detail, 'is_default': bool(a.is_default)}
+                for a in sorted(addrs, key=lambda item: (not bool(item.is_default), item.id))
+            ]})
+
+    is_default = bool(request.json.get('is_default'))
+    user_addrs = Address.query.filter_by(user_id=user_id).all()
+    if not user_addrs:
+        is_default = True
+    if is_default:
+        for addr in user_addrs:
+            addr.is_default = False
+    db.session.add(Address(
+        user_id=user_id,
+        name=request.json['name'],
+        phone=request.json['phone'],
+        detail=request.json['detail'],
+        is_default=is_default
+    ))
     db.session.commit()
     return jsonify({'code': 200})
+
+
+@app.route('/api/mobile/address/<int:addr_id>/default', methods=['POST'])
+def set_default_address(addr_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'code': 401, 'msg': '请先登录'})
+    addr = Address.query.filter_by(id=addr_id, user_id=user_id).first()
+    if not addr:
+        return jsonify({'code': 404, 'msg': '地址不存在'})
+    user_addrs = Address.query.filter_by(user_id=user_id).all()
+    for item in user_addrs:
+        item.is_default = item.id == addr.id
+    db.session.commit()
+    return jsonify({'code': 200, 'msg': '设置成功'})
 
 
 @app.route('/api/mobile/order', methods=['POST'])
@@ -1187,6 +1225,10 @@ if __name__ == '__main__':
             member_cols = [c['name'] for c in inspector.get_columns('member')]
             if 'hero_text' not in member_cols:
                 conn.execute(text("ALTER TABLE member ADD COLUMN hero_text VARCHAR(100) DEFAULT '鸟为什么会飞'"))
+                conn.commit()
+            address_cols = [c['name'] for c in inspector.get_columns('address')]
+            if 'is_default' not in address_cols:
+                conn.execute(text('ALTER TABLE address ADD COLUMN is_default BOOLEAN DEFAULT 0'))
                 conn.commit()
 
         # 初始化默认管理员账号（仅当管理员表为空时）

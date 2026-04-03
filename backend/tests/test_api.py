@@ -556,6 +556,42 @@ class TestAddress:
                         json={'name': '收件人', 'phone': '13312345678', 'detail': '北京朝阳区'})
         assert r.json['code'] == 200
 
+    def test_first_address_auto_becomes_default(self, client):
+        login(client)
+        client.post('/api/mobile/address',
+                    json={'name': '张三', 'phone': '13312345678', 'detail': '北京朝阳区'})
+        r = client.get('/api/mobile/address')
+        assert r.json['code'] == 200
+        assert len(r.json['data']) == 1
+        assert r.json['data'][0]['is_default'] is True
+
+    def test_add_default_address_switches_previous_default(self, client):
+        login(client)
+        client.post('/api/mobile/address',
+                    json={'name': '张三', 'phone': '13312345678', 'detail': '北京朝阳区'})
+        client.post('/api/mobile/address',
+                    json={'name': '李四', 'phone': '18800000000', 'detail': '上海浦东新区', 'is_default': True})
+        r = client.get('/api/mobile/address')
+        assert r.json['code'] == 200
+        assert r.json['data'][0]['name'] == '李四'
+        assert r.json['data'][0]['is_default'] is True
+        assert sum(1 for item in r.json['data'] if item['is_default']) == 1
+
+    def test_set_default_address_endpoint(self, client):
+        login(client)
+        client.post('/api/mobile/address',
+                    json={'name': '张三', 'phone': '13312345678', 'detail': '北京朝阳区'})
+        client.post('/api/mobile/address',
+                    json={'name': '李四', 'phone': '18800000000', 'detail': '上海浦东新区'})
+        addr_list = client.get('/api/mobile/address').json['data']
+        target_id = next(item['id'] for item in addr_list if item['name'] == '李四')
+        set_res = client.post(f'/api/mobile/address/{target_id}/default')
+        assert set_res.json['code'] == 200
+        refreshed = client.get('/api/mobile/address').json['data']
+        target_addr = next(item for item in refreshed if item['id'] == target_id)
+        assert target_addr['is_default'] is True
+        assert sum(1 for item in refreshed if item['is_default']) == 1
+
     def test_address_belongs_to_user(self, client):
         """不同用户地址互不可见"""
         login(client, 'user1')

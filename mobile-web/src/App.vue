@@ -587,8 +587,53 @@
 
     <van-popup v-model:show="showMyCouponSelector" position="bottom" round :style="{ height: '40%' }"><div style="padding:20px;"><h3 style="text-align:center;">选择优惠券</h3><van-cell-group><van-cell v-for="c in myUsableCoupons" :key="c.id" :title="c.name" :value="`- ¥${c.amount}`" clickable @click="selectedCoupon=c; showMyCouponSelector=false" /><van-cell title="不使用优惠券" clickable @click="selectedCoupon=null; showMyCouponSelector=false" /></van-cell-group></div></van-popup>
     <van-popup v-model:show="showMoreMenu" position="bottom" round :style="{ height: '40%' }"><div style="padding:20px;"><h3 style="text-align:center;margin-bottom:10px;">更多服务</h3><van-grid :column-num="4" clickable><van-grid-item v-for="(item, i) in moreMenuPool" :key="i" :icon="item.icon" :text="item.text" @click="replaceMenuItem(item)" /></van-grid></div></van-popup>
-    <van-popup v-model:show="showAddressManager" position="bottom" :style="{ height: '60%' }"><div style="padding:15px;"><h3>地址管理</h3><van-radio-group v-model="selectedAddrId"><div v-for="addr in addressList" :key="addr.id" class="addr-box" @click="selectedAddrId=addr.id;showAddressManager=false"><van-radio :name="addr.id" style="margin-right:10px;"></van-radio><div><b>{{ addr.name }} {{ addr.phone }}</b><br><span style="color:gray;font-size:12px;">{{ addr.detail }}</span></div></div></van-radio-group><van-button type="danger" block round style="margin-top:20px;" @click="showAddAddrForm=true">➕ 新增</van-button></div></van-popup>
-    <van-dialog v-model:show="showAddAddrForm" title="新增地址" show-cancel-button @confirm="saveAddress"><van-cell-group inset><van-field v-model="newAddr.name" label="姓名" /><van-field v-model="newAddr.phone" label="电话" /><van-field v-model="newAddr.detail" label="地址" /></van-cell-group></van-dialog>
+    <van-popup v-model:show="showAddressManager" position="bottom" :style="{ height: '60%' }">
+      <div style="padding:15px;">
+        <h3>地址管理</h3>
+        <van-radio-group v-model="selectedAddrId">
+          <div
+            v-for="addr in addressList"
+            :key="addr.id"
+            class="addr-box"
+            @click="selectedAddrId=addr.id;showAddressManager=false"
+          >
+            <van-radio :name="addr.id" style="margin-right:10px;"></van-radio>
+            <div class="addr-content">
+              <div class="addr-topline">
+                <b>{{ addr.name }} {{ addr.phone }}</b>
+                <van-tag v-if="addr.is_default" plain type="danger" round>默认地址</van-tag>
+              </div>
+              <span class="addr-detail">{{ addr.detail }}</span>
+              <div class="addr-actions">
+                <van-button
+                  v-if="!addr.is_default"
+                  plain
+                  round
+                  size="small"
+                  type="primary"
+                  @click.stop="setDefaultAddress(addr.id)"
+                >
+                  设为默认
+                </van-button>
+              </div>
+            </div>
+          </div>
+        </van-radio-group>
+        <van-button type="danger" block round style="margin-top:20px;" @click="showAddAddrForm=true">➕ 新增</van-button>
+      </div>
+    </van-popup>
+    <van-dialog v-model:show="showAddAddrForm" title="新增地址" show-cancel-button @confirm="saveAddress">
+      <van-cell-group inset>
+        <van-field v-model="newAddr.name" label="姓名" />
+        <van-field v-model="newAddr.phone" label="电话" />
+        <van-field v-model="newAddr.detail" label="地址" />
+        <van-cell title="设为默认地址" center>
+          <template #right-icon>
+            <van-switch v-model="newAddr.is_default" size="20" />
+          </template>
+        </van-cell>
+      </van-cell-group>
+    </van-dialog>
     <van-popup v-model:show="showFavorites" position="bottom" round :style="{ height: '60%' }">
       <div style="padding:20px;">
         <h3 style="text-align:center;">我的收藏</h3>
@@ -653,7 +698,7 @@ const loginTab = ref(0); const loginForm = reactive({username:'', password:''});
 const myOrderList = ref([]); const cartList = ref([])
 const showBuyDialog = ref(false); const showCartConfirm = ref(false); const selectedItem = ref(null); const showPaySuccess = ref(false)
 const showOrderDetail = ref(false); const currentOrderDetail = ref(null)
-const showAddressManager = ref(false); const showAddAddrForm = ref(false); const addressList = ref([]); const selectedAddrId = ref(null); const newAddr = reactive({name:'', phone:'', detail:''})
+const showAddressManager = ref(false); const showAddAddrForm = ref(false); const addressList = ref([]); const selectedAddrId = ref(null); const newAddr = reactive({name:'', phone:'', detail:'', is_default:false})
 const currentCategory = ref('🔥 爆款推荐'); const searchKeyword = ref('')
 const showRecharge = ref(false); const rechargeAmount = ref('')
 const showCoupon = ref(false); const showMoreMenu = ref(false)
@@ -1120,8 +1165,33 @@ const processPay = async (url, data) => {
 }
 const finishPayment = (target) => { showPaySuccess.value=false; activeTab.value = target==='order'?2:0 }
 const loadMyOrders = async () => { if(!currentUser.value)return; const res = await axios.get('http://localhost:5000/api/mobile/my_orders'); if(res.data.code===200) myOrderList.value=res.data.data }
-const loadAddress = async () => { const res = await axios.get('http://localhost:5000/api/mobile/address'); if(res.data.code===200) { addressList.value=res.data.data; if(addressList.value.length>0 && !selectedAddrId.value) selectedAddrId.value=addressList.value[0].id } }
-const saveAddress = async () => { await axios.post('http://localhost:5000/api/mobile/address', newAddr); showSuccessToast('成功'); loadAddress(); showAddAddrForm.value=false }
+const resetNewAddress = () => { newAddr.name=''; newAddr.phone=''; newAddr.detail=''; newAddr.is_default=false }
+const loadAddress = async () => {
+  const res = await axios.get('http://localhost:5000/api/mobile/address')
+  if(res.data.code===200) {
+    addressList.value=res.data.data
+    const defaultAddr = addressList.value.find(item => item.is_default)
+    if(defaultAddr) selectedAddrId.value = defaultAddr.id
+    else if(addressList.value.length>0 && !selectedAddrId.value) selectedAddrId.value=addressList.value[0].id
+  }
+}
+const saveAddress = async () => {
+  await axios.post('http://localhost:5000/api/mobile/address', newAddr)
+  showSuccessToast('成功')
+  await loadAddress()
+  showAddAddrForm.value=false
+  resetNewAddress()
+}
+const setDefaultAddress = async (id) => {
+  const res = await axios.post(`http://localhost:5000/api/mobile/address/${id}/default`)
+  if(res.data.code===200) {
+    selectedAddrId.value = id
+    showSuccessToast('默认地址已更新')
+    await loadAddress()
+  } else {
+    showToast(res.data.msg || '设置失败')
+  }
+}
 const confirmOrderReceipt = async (order) => { await axios.post(`http://localhost:5000/api/mobile/orders/${order.id}/confirm`); showSuccessToast('完成'); loadMyOrders() }
 const cancelOrder = async (order) => {
     showDialog({ title: '取消订单', message: '确定取消该订单？金额将退回账户余额', showCancelButton: true }).then(async () => {
@@ -2050,6 +2120,10 @@ body {
   margin-top: 2px;
 }
 .addr-box { background: #f9f4ef; padding: 15px; border-radius: 16px; margin-bottom: 10px; display: flex; align-items: center; border: 1px solid rgba(232,77,42,0.08); }
+.addr-content { flex: 1; min-width: 0; }
+.addr-topline { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.addr-detail { color: gray; font-size: 12px; line-height: 1.5; display: block; }
+.addr-actions { margin-top: 10px; display: flex; justify-content: flex-end; }
 .fav-item { display: flex; background: #ffffff; padding: 12px; border-radius: 16px; margin-bottom: 10px; box-shadow: var(--mall-shadow-card); align-items: center; }
 .fav-item img { width: 60px; height: 60px; border-radius: 8px; margin-right: 10px; object-fit: cover; }
 .f-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
