@@ -700,12 +700,12 @@ import { ref, computed, onMounted, reactive, watch, nextTick } from 'vue'
 import { showToast, showDialog, showSuccessToast, showLoadingToast, closeToast } from 'vant'
 import draggable from 'vuedraggable'
 import { DEFAULT_CURRENT_MENU, DEFAULT_HERO_TEXT, DEFAULT_MORE_MENU_POOL, DEFAULT_SYSTEM_CONFIG, HERO_TEXT_MAX } from './constants/appData'
+import { useAddressBook } from './composables/useAddressBook'
 import { loginMobile, registerMobile, signinMobile } from './services/auth'
 import { fetchBanners, fetchProductComments, fetchProducts, fetchSystemConfig } from './services/catalog'
 import { fetchCouponMarket, fetchMyCoupons, claimCoupon } from './services/coupon'
 import { rechargeBalance, updateProfile, updatePassword, uploadImage, upgradeVipLevel } from './services/profile'
 import { fetchCartList, addCartItem, updateCartItem, checkoutCart } from './services/cart'
-import { fetchAddressList, createAddress, switchDefaultAddress } from './services/address'
 import { createOrder, fetchMyOrders, confirmReceipt, cancelOrderById, fetchOrderDetail, fetchOrderLogistics } from './services/order'
 import { toggleFavoriteItem, fetchFavorites } from './services/favorite'
 import { submitCommentByOrder } from './services/comment'
@@ -786,6 +786,14 @@ const singleBasePrice = computed(() => {
 const cartBasePrice = computed(() => cartTotalPrice.value)
 const calculateCartFinalPrice = computed(() => calcFinal(cartBasePrice.value))
 const calculateFinalPrice = computed(() => calcFinal(singleBasePrice.value))
+const { loadAddress, saveAddress, setDefaultAddress } = useAddressBook({
+  addressList,
+  selectedAddrId,
+  newAddr,
+  showAddAddrForm,
+  showSuccessToast,
+  showToast,
+})
 
 const calcFinal = (basePrice) => {
   let price = Number(basePrice) || 0
@@ -1206,33 +1214,6 @@ const processPay = async (submitRequest, data) => {
 }
 const finishPayment = (target) => { showPaySuccess.value=false; activeTab.value = target==='order'?2:0 }
 const loadMyOrders = async () => { if(!currentUser.value)return; const res = await fetchMyOrders(); if(res.data.code===200) myOrderList.value=res.data.data }
-const resetNewAddress = () => { newAddr.name=''; newAddr.phone=''; newAddr.detail=''; newAddr.is_default=false }
-const loadAddress = async () => {
-  const res = await fetchAddressList()
-  if(res.data.code===200) {
-    addressList.value=res.data.data
-    const defaultAddr = addressList.value.find(item => item.is_default)
-    if(defaultAddr) selectedAddrId.value = defaultAddr.id
-    else if(addressList.value.length>0 && !selectedAddrId.value) selectedAddrId.value=addressList.value[0].id
-  }
-}
-const saveAddress = async () => {
-  await createAddress(newAddr)
-  showSuccessToast('成功')
-  await loadAddress()
-  showAddAddrForm.value=false
-  resetNewAddress()
-}
-const setDefaultAddress = async (id) => {
-  const res = await switchDefaultAddress(id)
-  if(res.data.code===200) {
-    selectedAddrId.value = id
-    showSuccessToast('默认地址已更新')
-    await loadAddress()
-  } else {
-    showToast(res.data.msg || '设置失败')
-  }
-}
 const confirmOrderReceipt = async (order) => { await confirmReceipt(order.id); showSuccessToast('完成'); loadMyOrders() }
 const cancelOrder = async (order) => {
     showDialog({ title: '取消订单', message: '确定取消该订单？金额将退回账户余额', showCancelButton: true }).then(async () => {
