@@ -702,12 +702,11 @@ import draggable from 'vuedraggable'
 import { DEFAULT_CURRENT_MENU, DEFAULT_HERO_TEXT, DEFAULT_MORE_MENU_POOL, DEFAULT_SYSTEM_CONFIG, HERO_TEXT_MAX } from './constants/appData'
 import { useAccountCenter } from './composables/useAccountCenter'
 import { useAddressBook } from './composables/useAddressBook'
+import { useEngagementCenter } from './composables/useEngagementCenter'
 import { signinMobile } from './services/auth'
 import { fetchBanners, fetchProductComments, fetchProducts, fetchSystemConfig } from './services/catalog'
-import { fetchCouponMarket, fetchMyCoupons, claimCoupon } from './services/coupon'
 import { fetchCartList, addCartItem, updateCartItem, checkoutCart } from './services/cart'
 import { createOrder, fetchMyOrders, confirmReceipt, cancelOrderById, fetchOrderDetail, fetchOrderLogistics } from './services/order'
-import { toggleFavoriteItem, fetchFavorites } from './services/favorite'
 import { submitCommentByOrder } from './services/comment'
 
 const activeTab = ref(0); const goodsList = ref([]); const currentUser = ref(null)
@@ -793,6 +792,27 @@ const { loadAddress, saveAddress, setDefaultAddress } = useAddressBook({
   showAddAddrForm,
   showSuccessToast,
   showToast,
+})
+const {
+  openCouponCenter,
+  handleGetCoupon,
+  openMyCoupons,
+  openCheckoutCouponSelector,
+  viewMyWalletCoupons,
+  toggleFavorite,
+  loadFavorites,
+} = useEngagementCenter({
+  currentUser,
+  showCoupon,
+  showMyCouponSelector,
+  showOwnedCouponsPopup,
+  showFavorites,
+  coupons,
+  myUsableCoupons,
+  favoriteList,
+  favIds,
+  showToast,
+  showSuccessToast,
 })
 const loadData = () => { loadMyOrders(); loadAddress(); loadCart(); loadFavorites(); openMyCoupons(); }
 const {
@@ -1000,57 +1020,6 @@ const handleSignin = async () => {
   if(res.data.code===200){ currentUser.value.points=res.data.points; showSigninPopup.value = true }
 }
 
-const openCouponCenter = async () => {
-  showCoupon.value = true
-  const res = await fetchCouponMarket()
-  if(res.data.code === 200) {
-      coupons.value = res.data.data.map(c => ({...c, got: false}))
-      if(currentUser.value) {
-          const myRes = await fetchMyCoupons()
-          if(myRes.data.code===200) {
-              const myCouponNames = myRes.data.data.map(mc => mc.name)
-              coupons.value.forEach(c => {
-                  if(myCouponNames.includes(c.name)) c.got = true
-              })
-          }
-      }
-  }
-}
-
-const handleGetCoupon = async (c) => {
-  if(!currentUser.value) return showToast('请登录');
-  try {
-    const res = await claimCoupon(c.id);
-    if(res.data.code===200) {
-        showSuccessToast('领取成功');
-        c.got = true;
-        // 刷新我的优惠券列表以便数字更新
-        openMyCoupons();
-    }
-    else { if(res.data.msg.includes('已领取')) c.got = true; showToast(res.data.msg) }
-  } catch(e) { showToast('网络错误') }
-}
-
-const openMyCoupons = async () => {
-    if(!currentUser.value) return;
-    const res = await fetchMyCoupons();
-    if(res.data.code===200){
-        myUsableCoupons.value=res.data.data;
-        // 这里的 showMyCouponSelector 原本是下单用的，如果是仅查看不需要设置true，除非是在下单界面
-        // 这里只是为了刷新数据
-    }
-}
-const openCheckoutCouponSelector = async () => {
-    if(!currentUser.value) return showToast('请登录');
-    await openMyCoupons();
-    showMyCouponSelector.value = true;
-}
-const viewMyWalletCoupons = async () => {
-    if(!currentUser.value) return showToast('请登录');
-    await openMyCoupons();
-    showOwnedCouponsPopup.value = true;
-}
-
 const replaceMenuItem = (newItem) => { const moreIndex = currentMenu.value.findIndex(i => i.act === 'more'); const targetIndex = moreIndex > 0 ? moreIndex - 1 : 0; const oldItem = currentMenu.value[targetIndex]; currentMenu.value[targetIndex] = newItem; moreMenuPool.value.push(oldItem); const poolIndex = moreMenuPool.value.indexOf(newItem); if (poolIndex > -1) moreMenuPool.value.splice(poolIndex, 1); showMoreMenu.value = false; showToast(`已切换为 ${newItem.text}`) }
 const bindOrderDetailContactActions = () => {
     const buttons = document.querySelectorAll('.contact-line .van-button')
@@ -1206,29 +1175,6 @@ const cancelOrder = async (order) => {
     }).catch(() => {})
 }
 const viewOrderDetail = async (id) => { showLoadingToast('加载...'); try { const res = await fetchOrderDetail(id); const logRes = await fetchOrderLogistics(id); if(res.data.code===200) { currentOrderDetail.value=res.data.data; logisticsTraces.value = logRes.data.data || []; showOrderDetail.value=true } } finally { closeToast() } }
-const toggleFavorite = async (item) => {
-    if(!currentUser.value) return showToast('请登录');
-    const res = await toggleFavoriteItem(item.id);
-    if(res.data.code === 200) {
-        if(res.data.action === 'add') {
-             showSuccessToast('收藏成功，宝贝已经躺在我的收藏里面啦');
-             favIds.value.push(item.id); // 立即更新状态
-        } else {
-             showToast('已取消收藏');
-             const idx = favIds.value.indexOf(item.id);
-             if(idx > -1) favIds.value.splice(idx, 1);
-        }
-        if(showFavorites.value) loadFavorites();
-    }
-}
-const loadFavorites = async () => {
-    const res = await fetchFavorites();
-    if(res.data.code===200) {
-        favoriteList.value = res.data.data;
-        // 提取ID
-        favIds.value = res.data.data.map(i => i.id);
-    }
-}
 const openComment = (order) => { commentForm.order_id = order.id; commentForm.content = ''; commentForm.rating = 5; showCommentDialog.value = true }
 const submitComment = async () => { const res = await submitCommentByOrder(commentForm); if(res.data.code === 200) { showSuccessToast('评价成功'); loadMyOrders(); showCommentDialog.value=false } }
 
