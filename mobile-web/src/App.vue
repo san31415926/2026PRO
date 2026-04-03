@@ -697,10 +697,18 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive, watch, nextTick } from 'vue'
-import axios from 'axios'
 import { showToast, showDialog, showSuccessToast, showLoadingToast, closeToast } from 'vant'
 import draggable from 'vuedraggable'
 import { DEFAULT_CURRENT_MENU, DEFAULT_HERO_TEXT, DEFAULT_MORE_MENU_POOL, DEFAULT_SYSTEM_CONFIG, HERO_TEXT_MAX } from './constants/appData'
+import { loginMobile, registerMobile, signinMobile } from './services/auth'
+import { fetchBanners, fetchProductComments, fetchProducts, fetchSystemConfig } from './services/catalog'
+import { fetchCouponMarket, fetchMyCoupons, claimCoupon } from './services/coupon'
+import { rechargeBalance, updateProfile, updatePassword, uploadImage, upgradeVipLevel } from './services/profile'
+import { fetchCartList, addCartItem, updateCartItem, checkoutCart } from './services/cart'
+import { fetchAddressList, createAddress, switchDefaultAddress } from './services/address'
+import { createOrder, fetchMyOrders, confirmReceipt, cancelOrderById, fetchOrderDetail, fetchOrderLogistics } from './services/order'
+import { toggleFavoriteItem, fetchFavorites } from './services/favorite'
+import { submitCommentByOrder } from './services/comment'
 
 const activeTab = ref(0); const goodsList = ref([]); const currentUser = ref(null)
 const loginTab = ref(0); const loginForm = reactive({username:'', password:''}); const regForm = reactive({username:'', password:''})
@@ -883,11 +891,11 @@ const openOrderList = () => { showAllOrders.value = true }
 const loadProducts = async (isManualRefresh = false) => {
   if (isManualRefresh) showLoadingToast({ message: '刷新中', forbidClick: true, duration: 0 })
   try {
-    const res = await axios.get('http://localhost:5000/api/products')
+    const res = await fetchProducts()
     if(res.data.code === 200) goodsList.value = res.data.data.filter(item => item.is_on_sale)
-    const bannerRes = await axios.get('http://localhost:5000/api/banners')
+    const bannerRes = await fetchBanners()
     if(bannerRes.data.code === 200) bannerList.value = bannerRes.data.data
-    const cfgRes = await axios.get('http://localhost:5000/api/common/config')
+    const cfgRes = await fetchSystemConfig()
     if(cfgRes.data.code === 200) {
         systemConfig.value.group_buy_people = parseInt(cfgRes.data.data.group_buy_people)
         systemConfig.value.seckill_time_limit = parseInt(cfgRes.data.data.seckill_time_limit)
@@ -929,17 +937,17 @@ const handleGridClick = (item) => {
 }
 const handleSignin = async () => {
   if(!currentUser.value) return showToast('请登录');
-  const res = await axios.post('http://localhost:5000/api/mobile/signin');
+  const res = await signinMobile();
   if(res.data.code===200){ currentUser.value.points=res.data.points; showSigninPopup.value = true }
 }
 
 const openCouponCenter = async () => {
   showCoupon.value = true
-  const res = await axios.get('http://localhost:5000/api/mobile/coupon/market')
+  const res = await fetchCouponMarket()
   if(res.data.code === 200) {
       coupons.value = res.data.data.map(c => ({...c, got: false}))
       if(currentUser.value) {
-          const myRes = await axios.get('http://localhost:5000/api/mobile/coupon/my')
+          const myRes = await fetchMyCoupons()
           if(myRes.data.code===200) {
               const myCouponNames = myRes.data.data.map(mc => mc.name)
               coupons.value.forEach(c => {
@@ -953,7 +961,7 @@ const openCouponCenter = async () => {
 const handleGetCoupon = async (c) => {
   if(!currentUser.value) return showToast('请登录');
   try {
-    const res = await axios.post('http://localhost:5000/api/mobile/coupon/get', { id: c.id });
+    const res = await claimCoupon(c.id);
     if(res.data.code===200) {
         showSuccessToast('领取成功');
         c.got = true;
@@ -966,7 +974,7 @@ const handleGetCoupon = async (c) => {
 
 const openMyCoupons = async () => {
     if(!currentUser.value) return;
-    const res = await axios.get('http://localhost:5000/api/mobile/coupon/my');
+    const res = await fetchMyCoupons();
     if(res.data.code===200){
         myUsableCoupons.value=res.data.data;
         // 这里的 showMyCouponSelector 原本是下单用的，如果是仅查看不需要设置true，除非是在下单界面
@@ -991,14 +999,14 @@ const submitRecharge = async () => {
   showLoadingToast({ message: '正在验证支付...', forbidClick: true, duration: 0 });
   try {
     await new Promise(r=>setTimeout(r,1500));
-    const res = await axios.post('http://localhost:5000/api/mobile/recharge', { amount: rechargeAmount.value });
+    const res = await rechargeBalance(rechargeAmount.value);
     closeToast();
     if (res.data.code === 200) { showSuccessToast('充值成功'); if (currentUser.value) { currentUser.value.balance = res.data.balance; } showRecharge.value = false; rechargeAmount.value = ''; } else { showToast(res.data.msg || '充值失败'); }
   } catch (e) { closeToast(); showToast('网络错误'); }
 }
-const onLogin = async () => { try { const res = await axios.post('http://localhost:5000/api/mobile/login', loginForm); if(res.data.code===200){ currentUser.value=res.data.data; heroText.value = res.data.data.hero_text || DEFAULT_HERO_TEXT; showSuccessToast('欢迎'); loadData(); } else showToast(res.data.msg) } catch(e){showToast('失败')} }
+const onLogin = async () => { try { const res = await loginMobile(loginForm); if(res.data.code===200){ currentUser.value=res.data.data; heroText.value = res.data.data.hero_text || DEFAULT_HERO_TEXT; showSuccessToast('欢迎'); loadData(); } else showToast(res.data.msg) } catch(e){showToast('失败')} }
 const onRegister = async () => {
-  const res = await axios.post('http://localhost:5000/api/mobile/register', regForm)
+  const res = await registerMobile(regForm)
   if(res.data.code===200){
     showSuccessToast(res.data.newcomer_coupon_received ? '注册成功，新人券已到账' : '注册成功')
     loginTab.value=0
@@ -1007,14 +1015,14 @@ const onRegister = async () => {
 }
 const logout = () => { showDialog({ title: '提示', message: '确定要切换账号吗？', showCancelButton: true }).then(() => { currentUser.value=null; heroText.value = DEFAULT_HERO_TEXT; loginForm.username=''; loginForm.password=''; cartList.value=[]; myOrderList=[]; favoriteList=[]; myUsableCoupons.value=[]; coupons.value.forEach(c=>c.got=false); favIds.value=[]; showSuccessToast('已退出'); activeTab.value = 2; }) }
 const openEditName = () => { editingName.value = currentUser.value.nickname; showEditNameDialog.value = true }
-const submitEditName = async () => { if(!editingName.value) return showToast('昵称不能为空'); const res = await axios.post('http://localhost:5000/api/mobile/profile/update', { nickname: editingName.value }); if(res.data.code===200) { currentUser.value.nickname = editingName.value; showSuccessToast('修改成功') } else showToast(res.data.msg) }
+const submitEditName = async () => { if(!editingName.value) return showToast('昵称不能为空'); const res = await updateProfile({ nickname: editingName.value }); if(res.data.code===200) { currentUser.value.nickname = editingName.value; showSuccessToast('修改成功') } else showToast(res.data.msg) }
 const resetChangePasswordForm = () => { changePasswordForm.old_password=''; changePasswordForm.new_password=''; changePasswordForm.confirm_password='' }
 const openChangePasswordDialog = () => { resetChangePasswordForm(); showChangePasswordDialog.value = true }
 const submitChangePassword = async () => {
     if(!changePasswordForm.old_password || !changePasswordForm.new_password || !changePasswordForm.confirm_password) return showToast('请填写完整信息')
     if(changePasswordForm.new_password.length < 6) return showToast('新密码至少 6 位')
     if(changePasswordForm.new_password !== changePasswordForm.confirm_password) return showToast('两次输入的新密码不一致')
-    const res = await axios.post('http://localhost:5000/api/mobile/profile/password', {
+    const res = await updatePassword({
       old_password: changePasswordForm.old_password,
       new_password: changePasswordForm.new_password
     })
@@ -1031,7 +1039,7 @@ const submitEditHeroText = () => {
     const text = (editingHeroText.value || '').trim()
     if(!text) return showToast('文案不能为空')
     if(text.length > HERO_TEXT_MAX) return showToast(`最多 ${HERO_TEXT_MAX} 个字`)
-    axios.post('http://localhost:5000/api/mobile/profile/update', { hero_text: text }).then((res) => {
+    updateProfile({ hero_text: text }).then((res) => {
         if(res.data.code===200) {
             heroText.value = res.data.hero_text || text
             if(currentUser.value) currentUser.value.hero_text = heroText.value
@@ -1067,24 +1075,24 @@ const handleAvatarChange = async (e) => {
     form.append('file', file);
     showLoadingToast({ message: '上传中...', forbidClick: true });
     try {
-        const upRes = await axios.post('http://localhost:5000/api/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+        const upRes = await uploadImage(form);
         if (upRes.data.code !== 200) { closeToast(); return showToast('上传失败'); }
         const url = upRes.data.url;
-        const res = await axios.post('http://localhost:5000/api/mobile/profile/update', { avatar: url });
+        const res = await updateProfile({ avatar: url });
         closeToast();
         if (res.data.code === 200) { currentUser.value.avatar = url; showSuccessToast('头像已更新'); } else showToast(res.data.msg);
     } catch { closeToast(); showToast('网络错误'); }
     e.target.value = '';
 }
 const loadData = () => { loadMyOrders(); loadAddress(); loadCart(); loadFavorites(); openMyCoupons(); }
-const loadCart = async () => { if(!currentUser.value) return; const res = await axios.get('http://localhost:5000/api/mobile/cart/list'); if(res.data.code===200) cartList.value = res.data.data.map(i => ({...i, checked: true})) }
+const loadCart = async () => { if(!currentUser.value) return; const res = await fetchCartList(); if(res.data.code===200) cartList.value = res.data.data.map(i => ({...i, checked: true})) }
 const handleAddToCart = async (item) => {
     if(!currentUser.value) return showToast('请登录');
     if(item.is_seckill) return showToast('秒杀商品请直接购买');
-    const res = await axios.post('http://localhost:5000/api/mobile/cart/add', { product_id: item.id });
+    const res = await addCartItem(item.id);
     if(res.data.code===200) { showSuccessToast('已加购'); loadCart() } else { showToast(res.data.msg || '加入购物车失败') }
 }
-const updateCartNum = async (item, num) => { if (num === undefined) num = item.num; await axios.post('http://localhost:5000/api/mobile/cart/update', { id: item.id, num: num }); loadCart() }
+const updateCartNum = async (item, num) => { if (num === undefined) num = item.num; await updateCartItem(item.id, num); loadCart() }
 const toggleAllCheck = (val) => { cartList.value.forEach(item => item.checked = val) }
 
 // 🔥 核心修改：点击商品 -> 打开统一详情页 (openProductDetail) 🔥
@@ -1105,7 +1113,7 @@ const openProductDetail = async (item) => {
     showProductDetail.value = true
 
     try {
-        const res = await axios.get(`http://localhost:5000/api/products/${item.id}/comments`)
+        const res = await fetchProductComments(item.id)
         if (res.data.code === 200) productComments.value = res.data.data
     } catch {}
 }
@@ -1183,24 +1191,24 @@ const handleCartCheckout = () => {
     if(addressList.value.length===0) loadAddress()
 }
 
-const confirmSingleOrder = async () => { await processPay('http://localhost:5000/api/mobile/order', { product_id: selectedItem.value.id, address_id: selectedAddrId.value, coupon_id: selectedCoupon.value?.id, use_points: usePoints.value, group_action: isGroupBuyMode.value ? pendingGroupAction.value : null, group_code: isGroupBuyMode.value ? inputGroupCode.value : null }) }
-const confirmCartOrder = async () => { await processPay('http://localhost:5000/api/mobile/cart/checkout', { cart_ids: checkedCartItems.value.map(i=>i.id), address_id: selectedAddrId.value, coupon_id: selectedCoupon.value?.id, use_points: usePoints.value }) }
-const processPay = async (url, data) => {
+const confirmSingleOrder = async () => { await processPay(createOrder, { product_id: selectedItem.value.id, address_id: selectedAddrId.value, coupon_id: selectedCoupon.value?.id, use_points: usePoints.value, group_action: isGroupBuyMode.value ? pendingGroupAction.value : null, group_code: isGroupBuyMode.value ? inputGroupCode.value : null }) }
+const confirmCartOrder = async () => { await processPay(checkoutCart, { cart_ids: checkedCartItems.value.map(i=>i.id), address_id: selectedAddrId.value, coupon_id: selectedCoupon.value?.id, use_points: usePoints.value }) }
+const processPay = async (submitRequest, data) => {
     if(!selectedAddrId.value) return showToast('请选地址');
     const amountToPay = calculateFinalPrice.value > 0 ? calculateFinalPrice.value : calculateCartFinalPrice.value;
     showLoadingToast({message:'正在验证支付...', forbidClick:true, duration:0});
     try {
         await new Promise(r=>setTimeout(r,1500));
-        const res = await axios.post(url, data);
+        const res = await submitRequest(data);
         closeToast();
         if(res.data.code===200) { currentUser.value.balance=res.data.balance; currentUser.value.points=res.data.points; lastPaidAmount.value = amountToPay; lastOrderGroupCode.value = res.data.group_code || null; showBuyDialog.value = false; showCartConfirm.value = false; showPaySuccess.value=true; loadData(); pendingGroupAction.value = null; inputGroupCode.value = ''; } else { showToast(res.data.msg) }
     } catch(e) { closeToast(); showToast('网络请求失败') }
 }
 const finishPayment = (target) => { showPaySuccess.value=false; activeTab.value = target==='order'?2:0 }
-const loadMyOrders = async () => { if(!currentUser.value)return; const res = await axios.get('http://localhost:5000/api/mobile/my_orders'); if(res.data.code===200) myOrderList.value=res.data.data }
+const loadMyOrders = async () => { if(!currentUser.value)return; const res = await fetchMyOrders(); if(res.data.code===200) myOrderList.value=res.data.data }
 const resetNewAddress = () => { newAddr.name=''; newAddr.phone=''; newAddr.detail=''; newAddr.is_default=false }
 const loadAddress = async () => {
-  const res = await axios.get('http://localhost:5000/api/mobile/address')
+  const res = await fetchAddressList()
   if(res.data.code===200) {
     addressList.value=res.data.data
     const defaultAddr = addressList.value.find(item => item.is_default)
@@ -1209,14 +1217,14 @@ const loadAddress = async () => {
   }
 }
 const saveAddress = async () => {
-  await axios.post('http://localhost:5000/api/mobile/address', newAddr)
+  await createAddress(newAddr)
   showSuccessToast('成功')
   await loadAddress()
   showAddAddrForm.value=false
   resetNewAddress()
 }
 const setDefaultAddress = async (id) => {
-  const res = await axios.post(`http://localhost:5000/api/mobile/address/${id}/default`)
+  const res = await switchDefaultAddress(id)
   if(res.data.code===200) {
     selectedAddrId.value = id
     showSuccessToast('默认地址已更新')
@@ -1225,10 +1233,10 @@ const setDefaultAddress = async (id) => {
     showToast(res.data.msg || '设置失败')
   }
 }
-const confirmOrderReceipt = async (order) => { await axios.post(`http://localhost:5000/api/mobile/orders/${order.id}/confirm`); showSuccessToast('完成'); loadMyOrders() }
+const confirmOrderReceipt = async (order) => { await confirmReceipt(order.id); showSuccessToast('完成'); loadMyOrders() }
 const cancelOrder = async (order) => {
     showDialog({ title: '取消订单', message: '确定取消该订单？金额将退回账户余额', showCancelButton: true }).then(async () => {
-        const res = await axios.post(`http://localhost:5000/api/mobile/orders/${order.id}/cancel`)
+        const res = await cancelOrderById(order.id)
         if (res.data.code === 200) {
             showSuccessToast('已取消，余额已退回')
             if (currentUser.value) currentUser.value.balance = res.data.balance
@@ -1239,10 +1247,10 @@ const cancelOrder = async (order) => {
         }
     }).catch(() => {})
 }
-const viewOrderDetail = async (id) => { showLoadingToast('加载...'); try { const res = await axios.get(`http://localhost:5000/api/mobile/orders/${id}`); const logRes = await axios.get(`http://localhost:5000/api/mobile/orders/${id}/logistics`); if(res.data.code===200) { currentOrderDetail.value=res.data.data; logisticsTraces.value = logRes.data.data || []; showOrderDetail.value=true } } finally { closeToast() } }
+const viewOrderDetail = async (id) => { showLoadingToast('加载...'); try { const res = await fetchOrderDetail(id); const logRes = await fetchOrderLogistics(id); if(res.data.code===200) { currentOrderDetail.value=res.data.data; logisticsTraces.value = logRes.data.data || []; showOrderDetail.value=true } } finally { closeToast() } }
 const toggleFavorite = async (item) => {
     if(!currentUser.value) return showToast('请登录');
-    const res = await axios.post('http://localhost:5000/api/mobile/favorite/toggle', { product_id: item.id });
+    const res = await toggleFavoriteItem(item.id);
     if(res.data.code === 200) {
         if(res.data.action === 'add') {
              showSuccessToast('收藏成功，宝贝已经躺在我的收藏里面啦');
@@ -1256,7 +1264,7 @@ const toggleFavorite = async (item) => {
     }
 }
 const loadFavorites = async () => {
-    const res = await axios.get('http://localhost:5000/api/mobile/favorites');
+    const res = await fetchFavorites();
     if(res.data.code===200) {
         favoriteList.value = res.data.data;
         // 提取ID
@@ -1264,7 +1272,7 @@ const loadFavorites = async () => {
     }
 }
 const openComment = (order) => { commentForm.order_id = order.id; commentForm.content = ''; commentForm.rating = 5; showCommentDialog.value = true }
-const submitComment = async () => { const res = await axios.post('http://localhost:5000/api/mobile/comments/add', commentForm); if(res.data.code === 200) { showSuccessToast('评价成功'); loadMyOrders(); showCommentDialog.value=false } }
+const submitComment = async () => { const res = await submitCommentByOrder(commentForm); if(res.data.code === 200) { showSuccessToast('评价成功'); loadMyOrders(); showCommentDialog.value=false } }
 const upgradeVip = () => {
     if(!currentUser.value) return showToast('请登录');
     showVipModal.value = true
@@ -1279,7 +1287,7 @@ const selectVip = (level) => {
 const confirmVipPay = async () => {
     showLoadingToast('处理中...')
     try {
-        const res = await axios.post('http://localhost:5000/api/mobile/vip/upgrade', { level: pendingVipLevel.value })
+        const res = await upgradeVipLevel(pendingVipLevel.value)
         closeToast()
         if(res.data.code === 200) {
             currentUser.value.level = res.data.level
