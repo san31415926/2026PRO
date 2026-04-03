@@ -703,11 +703,11 @@ import { DEFAULT_CURRENT_MENU, DEFAULT_HERO_TEXT, DEFAULT_MORE_MENU_POOL, DEFAUL
 import { useAccountCenter } from './composables/useAccountCenter'
 import { useAddressBook } from './composables/useAddressBook'
 import { useEngagementCenter } from './composables/useEngagementCenter'
+import { useGroupPurchase } from './composables/useGroupPurchase'
+import { useOrderCenter } from './composables/useOrderCenter'
 import { signinMobile } from './services/auth'
 import { fetchBanners, fetchProductComments, fetchProducts, fetchSystemConfig } from './services/catalog'
-import { fetchCartList, addCartItem, updateCartItem, checkoutCart } from './services/cart'
-import { createOrder, fetchMyOrders, confirmReceipt, cancelOrderById, fetchOrderDetail, fetchOrderLogistics } from './services/order'
-import { submitCommentByOrder } from './services/comment'
+import { fetchCartList, addCartItem, updateCartItem } from './services/cart'
 
 const activeTab = ref(0); const goodsList = ref([]); const currentUser = ref(null)
 const loginTab = ref(0); const loginForm = reactive({username:'', password:''}); const regForm = reactive({username:'', password:''})
@@ -814,7 +814,69 @@ const {
   showToast,
   showSuccessToast,
 })
+const {
+  cancelGroupChoice,
+  openJoinGroupDialog,
+  buyGroupItemDirectly,
+  startNewGroup,
+  joinGroup,
+} = useGroupPurchase({
+  pendingGroupAction,
+  inputGroupCode,
+  isGroupBuyMode,
+  showGroupChoiceDialog,
+  showJoinGroupInput,
+  showBuyDialog,
+  showToast,
+})
 const loadData = () => { loadMyOrders(); loadAddress(); loadCart(); loadFavorites(); openMyCoupons(); }
+const {
+  openOrderList,
+  handleCartCheckout,
+  confirmSingleOrder,
+  confirmCartOrder,
+  finishPayment,
+  loadMyOrders,
+  confirmOrderReceipt,
+  cancelOrder,
+  viewOrderDetail,
+  openComment,
+  submitComment,
+} = useOrderCenter({
+  activeTab,
+  currentUser,
+  selectedItem,
+  selectedAddrId,
+  selectedCoupon,
+  usePoints,
+  checkedCartItems,
+  isSeckillExpired,
+  calculateFinalPrice,
+  calculateCartFinalPrice,
+  lastPaidAmount,
+  lastOrderGroupCode,
+  myOrderList,
+  currentOrderDetail,
+  logisticsTraces,
+  commentForm,
+  showBuyDialog,
+  showCartConfirm,
+  showAllOrders,
+  showPaySuccess,
+  showOrderDetail,
+  showCommentDialog,
+  pendingGroupAction,
+  inputGroupCode,
+  isGroupBuyMode,
+  addressList,
+  loadAddress,
+  loadData,
+  showToast,
+  showDialog,
+  showSuccessToast,
+  showLoadingToast,
+  closeToast,
+})
 const {
   openRecharge,
   submitRecharge,
@@ -965,7 +1027,6 @@ const getStatusText = (s) => {
     if(s===6) return '拼团失败'
     return '未知状态'
 }
-const openOrderList = () => { showAllOrders.value = true }
 
 const loadProducts = async (isManualRefresh = false) => {
   if (isManualRefresh) showLoadingToast({ message: '刷新中', forbidClick: true, duration: 0 })
@@ -1108,75 +1169,6 @@ const triggerBuyLogic = () => {
 const handleSeckillFinish = () => {
     refreshSelectedSeckillState()
 }
-
-const cancelGroupChoice = () => {
-    showGroupChoiceDialog.value = false
-    showJoinGroupInput.value = false
-    pendingGroupAction.value = null
-    inputGroupCode.value = ''
-    isGroupBuyMode.value = false
-}
-const openJoinGroupDialog = () => {
-    showGroupChoiceDialog.value = false
-    showJoinGroupInput.value = true
-}
-const buyGroupItemDirectly = () => {
-    isGroupBuyMode.value = false
-    pendingGroupAction.value = null
-    inputGroupCode.value = ''
-    showGroupChoiceDialog.value = false
-    showJoinGroupInput.value = false
-    showBuyDialog.value = true
-}
-const startNewGroup = () => { pendingGroupAction.value = 'create'; showGroupChoiceDialog.value = false; showBuyDialog.value = true }
-const joinGroup = () => { if(!inputGroupCode.value) return showToast('请输入拼团码'); pendingGroupAction.value = 'join'; showBuyDialog.value = true }
-
-// 🔥 修改：购物车结算拦截逻辑 🔥
-const handleCartCheckout = () => {
-    if(checkedCartItems.value.length===0) return showToast('请选择商品');
-
-    // 购物车秒杀拦截逻辑
-    const hasSeckillItem = checkedCartItems.value.some(i => i.category && i.category.includes('秒杀'))
-    if(hasSeckillItem && isSeckillExpired.value) {
-        return showDialog({ message: '包含已超时的秒杀商品，无法支付！请移除后重试。' })
-    }
-
-    usePoints.value=false; selectedCoupon.value=null; showCartConfirm.value=true;
-    if(addressList.value.length===0) loadAddress()
-}
-
-const confirmSingleOrder = async () => { await processPay(createOrder, { product_id: selectedItem.value.id, address_id: selectedAddrId.value, coupon_id: selectedCoupon.value?.id, use_points: usePoints.value, group_action: isGroupBuyMode.value ? pendingGroupAction.value : null, group_code: isGroupBuyMode.value ? inputGroupCode.value : null }) }
-const confirmCartOrder = async () => { await processPay(checkoutCart, { cart_ids: checkedCartItems.value.map(i=>i.id), address_id: selectedAddrId.value, coupon_id: selectedCoupon.value?.id, use_points: usePoints.value }) }
-const processPay = async (submitRequest, data) => {
-    if(!selectedAddrId.value) return showToast('请选地址');
-    const amountToPay = calculateFinalPrice.value > 0 ? calculateFinalPrice.value : calculateCartFinalPrice.value;
-    showLoadingToast({message:'正在验证支付...', forbidClick:true, duration:0});
-    try {
-        await new Promise(r=>setTimeout(r,1500));
-        const res = await submitRequest(data);
-        closeToast();
-        if(res.data.code===200) { currentUser.value.balance=res.data.balance; currentUser.value.points=res.data.points; lastPaidAmount.value = amountToPay; lastOrderGroupCode.value = res.data.group_code || null; showBuyDialog.value = false; showCartConfirm.value = false; showPaySuccess.value=true; loadData(); pendingGroupAction.value = null; inputGroupCode.value = ''; } else { showToast(res.data.msg) }
-    } catch(e) { closeToast(); showToast('网络请求失败') }
-}
-const finishPayment = (target) => { showPaySuccess.value=false; activeTab.value = target==='order'?2:0 }
-const loadMyOrders = async () => { if(!currentUser.value)return; const res = await fetchMyOrders(); if(res.data.code===200) myOrderList.value=res.data.data }
-const confirmOrderReceipt = async (order) => { await confirmReceipt(order.id); showSuccessToast('完成'); loadMyOrders() }
-const cancelOrder = async (order) => {
-    showDialog({ title: '取消订单', message: '确定取消该订单？金额将退回账户余额', showCancelButton: true }).then(async () => {
-        const res = await cancelOrderById(order.id)
-        if (res.data.code === 200) {
-            showSuccessToast('已取消，余额已退回')
-            if (currentUser.value) currentUser.value.balance = res.data.balance
-            showOrderDetail.value = false
-            loadMyOrders()
-        } else {
-            showToast(res.data.msg)
-        }
-    }).catch(() => {})
-}
-const viewOrderDetail = async (id) => { showLoadingToast('加载...'); try { const res = await fetchOrderDetail(id); const logRes = await fetchOrderLogistics(id); if(res.data.code===200) { currentOrderDetail.value=res.data.data; logisticsTraces.value = logRes.data.data || []; showOrderDetail.value=true } } finally { closeToast() } }
-const openComment = (order) => { commentForm.order_id = order.id; commentForm.content = ''; commentForm.rating = 5; showCommentDialog.value = true }
-const submitComment = async () => { const res = await submitCommentByOrder(commentForm); if(res.data.code === 200) { showSuccessToast('评价成功'); loadMyOrders(); showCommentDialog.value=false } }
 
 watch(activeTab, (val) => { if(val===1) loadCart(); if(val===2) loadMyOrders() })
 </script>
