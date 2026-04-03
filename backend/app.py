@@ -11,6 +11,7 @@ from bootstrap import initialize_app_data
 from extensions import db
 from models import Admin, Address, Banner, Cart, Comment, Favorite, GroupTeam, Member, Order, Product, SystemConfig, SystemCoupon, UserCoupon
 from routes.account_routes import register_account_routes
+from routes.member_routes import register_member_routes
 from utils.product_utils import format_dt, get_effective_product_price, get_effective_product_stock, get_seckill_status, get_user_seckill_order_count, has_explicit_seckill_config, is_group_product, is_seckill_product, parse_dt, serialize_product
 
 # --- 1. 鍒濆鍖栭厤缃?---
@@ -28,6 +29,7 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 
 db.init_app(app)
 register_account_routes(app, UPLOAD_FOLDER)
+register_member_routes(app)
 
 
 # --- 2. 璺ㄥ煙閰嶇疆 ---
@@ -228,55 +230,6 @@ def my_coupons():
     return jsonify({'code': 200,
                     'data': [{'id': c.id, 'name': c.name, 'amount': float(c.amount), 'min_spend': float(c.min_spend)}
                              for c in cs]})
-
-
-@app.route('/api/mobile/address', methods=['GET', 'POST'])
-def handle_address():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'code': 401, 'msg': '请先登录'})
-    if request.method == 'GET':
-        addrs = Address.query.filter_by(user_id=user_id).order_by(Address.id.asc()).all()
-        if addrs and not any(a.is_default for a in addrs):
-            addrs[0].is_default = True
-            db.session.commit()
-        return jsonify(
-            {'code': 200, 'data': [
-                {'id': a.id, 'name': a.name, 'phone': a.phone, 'detail': a.detail, 'is_default': bool(a.is_default)}
-                for a in sorted(addrs, key=lambda item: (not bool(item.is_default), item.id))
-            ]})
-
-    is_default = bool(request.json.get('is_default'))
-    user_addrs = Address.query.filter_by(user_id=user_id).all()
-    if not user_addrs:
-        is_default = True
-    if is_default:
-        for addr in user_addrs:
-            addr.is_default = False
-    db.session.add(Address(
-        user_id=user_id,
-        name=request.json['name'],
-        phone=request.json['phone'],
-        detail=request.json['detail'],
-        is_default=is_default
-    ))
-    db.session.commit()
-    return jsonify({'code': 200})
-
-
-@app.route('/api/mobile/address/<int:addr_id>/default', methods=['POST'])
-def set_default_address(addr_id):
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'code': 401, 'msg': '请先登录'})
-    addr = Address.query.filter_by(id=addr_id, user_id=user_id).first()
-    if not addr:
-        return jsonify({'code': 404, 'msg': '地址不存在'})
-    user_addrs = Address.query.filter_by(user_id=user_id).all()
-    for item in user_addrs:
-        item.is_default = item.id == addr.id
-    db.session.commit()
-    return jsonify({'code': 200, 'msg': '设置成功'})
 
 
 @app.route('/api/mobile/order', methods=['POST'])
@@ -596,43 +549,6 @@ def my_orders():
 def confirm_receipt(id):
     o = Order.query.get(id)
     o.status = 3
-    db.session.commit()
-    return jsonify({'code': 200})
-
-
-@app.route('/api/mobile/favorite/toggle', methods=['POST'])
-def toggle_favorite():
-    user_id = session.get('user_id')
-    if not user_id: return jsonify({'code': 401, 'msg': '璇峰厛鐧诲綍'})
-    product_id = request.json.get('product_id')
-    f = Favorite.query.filter_by(user_id=user_id, product_id=product_id).first()
-    action = ''
-    if f:
-        db.session.delete(f)
-        action = 'remove'
-        msg = '已取消收藏'
-    else:
-        db.session.add(Favorite(user_id=user_id, product_id=product_id))
-        action = 'add'
-        msg = '已收藏'
-    db.session.commit()
-    return jsonify({'code': 200, 'msg': msg, 'action': action})
-
-
-@app.route('/api/mobile/favorites', methods=['GET'])
-def get_favorites():
-    res = db.session.query(Favorite, Product).join(Product, Favorite.product_id == Product.id).filter(
-        Favorite.user_id == session.get('user_id')).all()
-    return jsonify({'code': 200, 'data': [serialize_product(p) for f, p in res]})
-
-
-@app.route('/api/mobile/comments/add', methods=['POST'])
-def add_comment():
-    data = request.json
-    db.session.add(Comment(user_id=session.get('user_id'), order_id=data['order_id'], content=data['content'],
-                           rating=data['rating']))
-    o = Order.query.get(data['order_id'])
-    o.status = 4
     db.session.commit()
     return jsonify({'code': 200})
 
