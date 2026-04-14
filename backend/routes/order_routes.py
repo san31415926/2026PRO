@@ -18,6 +18,18 @@ from utils.product_utils import (
 
 
 def register_order_routes(app):
+    def dedupe_group_orders_for_display(orders):
+        deduped = []
+        seen_group_keys = set()
+        for order in orders:
+            if order.group_team_id:
+                key = (order.user_id, order.group_team_id, order.product_id or order.product_title)
+                if key in seen_group_keys:
+                    continue
+                seen_group_keys.add(key)
+            deduped.append(order)
+        return deduped
+
     @app.route('/api/mobile/order', methods=['POST'])
     def create_order():
         user_id = session.get('user_id')
@@ -83,10 +95,38 @@ def register_order_routes(app):
             return jsonify({'code': 400, 'msg': '余额不足'})
         user.balance = float(user.balance) - final_amount
 
+        required_people_cfg = SystemConfig.query.filter_by(key='group_buy_people').first()
+        required_people = int(required_people_cfg.value) if required_people_cfg and required_people_cfg.value else 2
+
         order_status = 1
         team_id = None
+        team_completed = False
         if is_group_item and group_action:
             if group_action == 'create':
+                existing_leader_order = (
+                    db.session.query(Order, GroupTeam)
+                    .join(GroupTeam, Order.group_team_id == GroupTeam.id)
+                    .filter(
+                        Order.user_id == user.id,
+                        Order.product_id == product.id,
+                        Order.status == 5,
+                        GroupTeam.initiator_id == user.id,
+                        GroupTeam.status == 0,
+                    )
+                    .order_by(Order.id.desc())
+                    .first()
+                )
+                if existing_leader_order:
+                    existing_order, existing_team = existing_leader_order
+                    return jsonify({
+                        'code': 200,
+                        'msg': '鎴愬姛',
+                        'balance': float(user.balance),
+                        'points': user.points,
+                        'order_id': existing_order.id,
+                        'group_code': existing_team.code,
+                    })
+
                 group_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
                 new_team = GroupTeam(
                     code=group_code,
@@ -101,17 +141,42 @@ def register_order_routes(app):
                 order_status = 5
             elif group_action == 'join':
                 group_code = data.get('group_code')
+                existing_join_order = (
+                    db.session.query(Order, GroupTeam)
+                    .join(GroupTeam, Order.group_team_id == GroupTeam.id)
+                    .filter(
+                        Order.user_id == user.id,
+                        Order.product_id == product.id,
+                        Order.status.in_([1, 2, 3, 4, 5]),
+                        GroupTeam.code == group_code,
+                    )
+                    .order_by(Order.id.desc())
+                    .first()
+                )
+                if existing_join_order:
+                    existing_order, existing_team = existing_join_order
+                    return jsonify({
+                        'code': 200,
+                        'msg': '鎴愬姛',
+                        'balance': float(user.balance),
+                        'points': user.points,
+                        'order_id': existing_order.id,
+                        'group_code': existing_team.code,
+                    })
+
                 team = GroupTeam.query.filter_by(code=group_code, status=0).first()
                 if not team:
                     return jsonify({'code': 400, 'msg': '拼团码无效或已过期'})
                 if team.product_id != product.id:
                     return jsonify({'code': 400, 'msg': '拼团码商品不匹配'})
                 team.current_num += 1
-                team.status = 1
                 team_id = team.id
-                leader_order = Order.query.filter_by(group_team_id=team.id, status=5).first()
-                if leader_order:
-                    leader_order.status = 1
+                if team.current_num >= required_people:
+                    team.status = 1
+                    team_completed = True
+                    order_status = 1
+                else:
+                    order_status = 5
 
         if is_seckill_item:
             if has_explicit_seckill_config(product):
@@ -135,6 +200,10 @@ def register_order_routes(app):
             is_seckill_order=is_seckill_item,
         )
         db.session.add(order)
+        db.session.flush()
+
+        if is_group_item and group_action and team_completed and team_id:
+            Order.query.filter_by(group_team_id=team_id, status=5).update({'status': 1})
         db.session.commit()
 
         result = {
@@ -155,9 +224,19 @@ def register_order_routes(app):
         product = Product.query.get((request.json or {}).get('product_id'))
         if not product:
             return jsonify({'code': 404, 'msg': '商品不存在'})
-        if is_seckill_product(product):
-            return jsonify({'code': 400, 'msg': '秒杀商品请直接购买'})
         cart = Cart.query.filter_by(user_id=user_id, product_id=product.id).first()
+        if is_seckill_product(product):
+            status = get_seckill_status(product)
+            if status == 'upcoming':
+                return jsonify({'code': 400, 'msg': '秒杀未开始，暂时不能加入购物车'})
+            if status == 'ended':
+                return jsonify({'code': 400, 'msg': '秒杀已结束'})
+            if status == 'sold_out':
+                return jsonify({'code': 400, 'msg': '秒杀商品已售罄'})
+            limit = int(product.seckill_limit_per_user or 1)
+            current_num = cart.num if cart else 0
+            if current_num >= limit:
+                return jsonify({'code': 400, 'msg': f'秒杀商品每人限购 {limit} 件'})
         if cart:
             cart.num += 1
         else:
@@ -182,6 +261,14 @@ def register_order_routes(app):
         if count <= 0:
             db.session.delete(cart)
         else:
+            product = Product.query.get(cart.product_id)
+            if product and is_seckill_product(product):
+                status = get_seckill_status(product)
+                limit = int(product.seckill_limit_per_user or 1)
+                if status != 'active':
+                    return jsonify({'code': 400, 'msg': '该秒杀商品当前不可调整数量'})
+                if count > limit:
+                    return jsonify({'code': 400, 'msg': f'秒杀商品每人限购 {limit} 件'})
             cart.num = count
         db.session.commit()
         return jsonify({'code': 200})
@@ -197,6 +284,65 @@ def register_order_routes(app):
         user = Member.query.get(user_id)
         coupon_id = data.get('coupon_id')
         use_points = data.get('use_points')
+
+        seckill_cart_rows = []
+        for cart_id in data.get('cart_ids', []):
+            cart = Cart.query.get(cart_id)
+            if not cart:
+                continue
+            product = Product.query.get(cart.product_id)
+            if product and is_seckill_product(product):
+                seckill_cart_rows.append((cart, product))
+
+        if seckill_cart_rows:
+            if coupon_id:
+                return jsonify({'code': 400, 'msg': '秒杀商品加入购物车后结算时不支持优惠券'})
+            if use_points:
+                return jsonify({'code': 400, 'msg': '秒杀商品加入购物车后结算时不支持积分抵扣'})
+
+            total_amount = 0
+            orders = []
+            to_delete = []
+            for cart, product in seckill_cart_rows:
+                seckill_status = get_seckill_status(product)
+                if seckill_status == 'upcoming':
+                    return jsonify({'code': 400, 'msg': f'《{product.title}》秒杀未开始'})
+                if seckill_status == 'ended':
+                    return jsonify({'code': 400, 'msg': f'《{product.title}》秒杀已结束'})
+                if seckill_status == 'sold_out':
+                    return jsonify({'code': 400, 'msg': f'《{product.title}》已售罄'})
+                limit = int(product.seckill_limit_per_user or 1)
+                bought_count = get_user_seckill_order_count(user_id, product)
+                if bought_count + cart.num > limit:
+                    return jsonify({'code': 400, 'msg': f'《{product.title}》每人限购 {limit} 件'})
+                amount = float(product.seckill_price if product.seckill_price is not None else product.price) * cart.num
+                total_amount += amount
+                if has_explicit_seckill_config(product):
+                    product.seckill_stock = int(product.seckill_stock or 0) - cart.num
+                elif product.stock is not None:
+                    product.stock -= cart.num
+                orders.append(Order(
+                    order_no=f"CT{random.randint(1000, 9999)}",
+                    user_id=user.id,
+                    product_title=f"{product.title} x{cart.num}",
+                    product_img=product.cover_img,
+                    total_amount=amount,
+                    status=1,
+                    address_snapshot=f"{address.name} {address.detail}",
+                    category=product.category,
+                    product_id=product.id,
+                    is_seckill_order=True,
+                ))
+                to_delete.append(cart)
+
+            if user.balance < total_amount:
+                return jsonify({'code': 400, 'msg': '余额不足'})
+            user.balance = float(user.balance) - total_amount
+            db.session.add_all(orders)
+            for cart in to_delete:
+                db.session.delete(cart)
+            db.session.commit()
+            return jsonify({'code': 200, 'msg': '成功', 'balance': float(user.balance), 'points': user.points})
 
         total_amount = 0
         items = []
@@ -298,6 +444,15 @@ def register_order_routes(app):
     @app.route('/api/admin/orders', methods=['GET'])
     def admin_get_orders():
         rows = db.session.query(Order, Member).join(Member, Order.user_id == Member.id).order_by(Order.id.desc()).all()
+        deduped_rows = []
+        seen_group_keys = set()
+        for order, member in rows:
+            if order.group_team_id:
+                key = (order.user_id, order.group_team_id, order.product_id or order.product_title)
+                if key in seen_group_keys:
+                    continue
+                seen_group_keys.add(key)
+            deduped_rows.append((order, member))
         return jsonify({
             'code': 200,
             'data': [
@@ -312,7 +467,7 @@ def register_order_routes(app):
                     'date': str(order.created_at),
                     'tracking_no': order.tracking_no or '',
                 }
-                for order, member in rows
+                for order, member in deduped_rows
             ],
         })
 
@@ -359,6 +514,7 @@ def register_order_routes(app):
     @app.route('/api/mobile/my_orders', methods=['GET'])
     def my_orders():
         orders = Order.query.filter_by(user_id=session.get('user_id')).order_by(Order.id.desc()).all()
+        orders = dedupe_group_orders_for_display(orders)
         return jsonify({
             'code': 200,
             'data': [

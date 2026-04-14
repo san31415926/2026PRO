@@ -66,6 +66,7 @@ class Member(db.Model):
     balance = db.Column(db.Numeric(10, 2), default=0.00)
     points = db.Column(db.Integer, default=0)
     level = db.Column(db.Integer, default=1)
+    status = db.Column(db.Integer, default=1)
     avatar = db.Column(db.String(255), default='https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg')
     hero_text = db.Column(db.String(100), default='鸟为什么会飞')
 

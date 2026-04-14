@@ -1,6 +1,6 @@
 import datetime
 
-from flask import jsonify, request
+from flask import jsonify, request, session
 from sqlalchemy import func
 
 from extensions import db
@@ -8,37 +8,96 @@ from models import Comment, Member, Order, Product
 
 
 def register_admin_routes(app):
+    def require_admin():
+        admin_id = session.get('admin_id')
+        if not admin_id:
+            return jsonify({'code': 401, 'msg': '请先登录管理员账号'})
+        return None
+
+    def serialize_member(member):
+        return {
+            'id': member.id,
+            'username': member.username,
+            'nickname': member.nickname,
+            'level': member.level,
+            'status': getattr(member, 'status', 1) or 1,
+            'balance': float(member.balance),
+            'points': member.points,
+            'avatar': member.avatar,
+            'hero_text': getattr(member, 'hero_text', '') or '',
+        }
+
     @app.route('/api/admin/members', methods=['GET'])
     def admin_get_members():
+        auth_error = require_admin()
+        if auth_error:
+            return auth_error
         members = Member.query.order_by(Member.id.desc()).all()
-        return jsonify({
-            'code': 200,
-            'data': [
-                {
-                    'id': member.id,
-                    'username': member.username,
-                    'nickname': member.nickname,
-                    'level': member.level,
-                    'balance': float(member.balance),
-                    'points': member.points,
-                    'avatar': member.avatar,
-                }
-                for member in members
-            ],
-        })
+        return jsonify({'code': 200, 'data': [serialize_member(member) for member in members]})
 
     @app.route('/api/admin/member/recharge', methods=['POST'])
     def admin_recharge_member():
+        auth_error = require_admin()
+        if auth_error:
+            return auth_error
         data = request.json or {}
         member = Member.query.get(data.get('user_id'))
         if not member:
             return jsonify({'code': 400, 'msg': '用户不存在'})
-        member.balance = float(member.balance) + float(data.get('amount', 0))
+        amount = float(data.get('amount', 0) or 0)
+        if amount <= 0:
+            return jsonify({'code': 400, 'msg': '充值金额必须大于 0'})
+        member.balance = float(member.balance) + amount
         db.session.commit()
         return jsonify({'code': 200, 'msg': '充值成功', 'balance': float(member.balance)})
 
+    @app.route('/api/admin/member/<int:member_id>', methods=['PUT'])
+    def admin_update_member(member_id):
+        auth_error = require_admin()
+        if auth_error:
+            return auth_error
+        member = Member.query.get(member_id)
+        if not member:
+            return jsonify({'code': 404, 'msg': '会员不存在'})
+
+        data = request.json or {}
+        nickname = (data.get('nickname') or '').strip()
+        hero_text = (data.get('hero_text') or '').strip()
+
+        try:
+            level = int(data.get('level', member.level))
+            status = int(data.get('status', getattr(member, 'status', 1) or 1))
+            points = int(data.get('points', member.points))
+            balance = round(float(data.get('balance', member.balance)), 2)
+        except (TypeError, ValueError):
+            return jsonify({'code': 400, 'msg': '提交的会员信息格式不正确'})
+
+        if level not in (1, 2, 3):
+            return jsonify({'code': 400, 'msg': '会员等级仅支持普通、黄金VIP、钻石VIP'})
+        if status not in (1, 2):
+            return jsonify({'code': 400, 'msg': '会员状态仅支持正常或冻结'})
+        if points < 0:
+            return jsonify({'code': 400, 'msg': '积分不能小于 0'})
+        if balance < 0:
+            return jsonify({'code': 400, 'msg': '余额不能小于 0'})
+
+        if nickname:
+            member.nickname = nickname[:50]
+        if hero_text:
+            member.hero_text = hero_text[:20]
+        member.level = level
+        member.status = status
+        member.points = points
+        member.balance = balance
+
+        db.session.commit()
+        return jsonify({'code': 200, 'msg': '会员信息已更新', 'data': serialize_member(member)})
+
     @app.route('/api/admin/comments', methods=['GET'])
     def get_comments():
+        auth_error = require_admin()
+        if auth_error:
+            return auth_error
         rows = (
             db.session.query(Comment, Member, Order)
             .join(Member, Comment.user_id == Member.id)
@@ -63,13 +122,21 @@ def register_admin_routes(app):
 
     @app.route('/api/admin/comments/<int:id>', methods=['DELETE'])
     def delete_comment(id):
+        auth_error = require_admin()
+        if auth_error:
+            return auth_error
         comment = Comment.query.get(id)
+        if not comment:
+            return jsonify({'code': 404, 'msg': '评论不存在'})
         db.session.delete(comment)
         db.session.commit()
         return jsonify({'code': 200})
 
     @app.route('/api/admin/stats', methods=['GET'])
     def get_stats():
+        auth_error = require_admin()
+        if auth_error:
+            return auth_error
         today = datetime.date.today()
         yesterday = today - datetime.timedelta(days=1)
 
@@ -138,10 +205,8 @@ def register_admin_routes(app):
         ]
 
         level_rows = db.session.query(Member.level, func.count(Member.id)).group_by(Member.level).all()
-        level_data = [
-            {'name': ['', '普通会员', '黄金VIP', '钻石VIP'][level] if level <= 3 else f'等级{level}', 'value': int(count)}
-            for level, count in level_rows
-        ]
+        level_name_map = {1: '普通会员', 2: '黄金VIP', 3: '钻石VIP'}
+        level_data = [{'name': level_name_map.get(level, f'等级{level}'), 'value': int(count)} for level, count in level_rows]
         avg_rating = float(db.session.query(func.avg(Comment.rating)).scalar() or 0)
 
         def pct(current, previous):

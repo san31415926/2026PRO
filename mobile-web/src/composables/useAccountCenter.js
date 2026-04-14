@@ -1,4 +1,4 @@
-import { loginMobile, registerMobile } from '../services/auth'
+﻿import { loginMobile, logoutMobile, registerMobile } from '../services/auth'
 import { rechargeBalance, updateProfile, updatePassword, uploadImage, upgradeVipLevel } from '../services/profile'
 
 export function useAccountCenter(options) {
@@ -90,26 +90,36 @@ export function useAccountCenter(options) {
     }
   }
 
+  const clearAccountState = () => {
+    currentUser.value = null
+    heroText.value = DEFAULT_HERO_TEXT
+    loginForm.username = ''
+    loginForm.password = ''
+    cartList.value = []
+    myOrderList.value = []
+    favoriteList.value = []
+    myUsableCoupons.value = []
+    coupons.value.forEach((coupon) => {
+      coupon.got = false
+    })
+    favIds.value = []
+    activeTab.value = 2
+  }
+
   const logout = () => {
     showDialog({
       title: '提示',
       message: '确定要切换账号吗？',
       showCancelButton: true,
-    }).then(() => {
-      currentUser.value = null
-      heroText.value = DEFAULT_HERO_TEXT
-      loginForm.username = ''
-      loginForm.password = ''
-      cartList.value = []
-      myOrderList.value = []
-      favoriteList.value = []
-      myUsableCoupons.value = []
-      coupons.value.forEach((coupon) => {
-        coupon.got = false
-      })
-      favIds.value = []
-      showSuccessToast('已退出登录')
-      activeTab.value = 2
+    }).then(async () => {
+      try {
+        await logoutMobile()
+      } catch (error) {
+        console.error(error)
+      } finally {
+        clearAccountState()
+        showSuccessToast('已退出登录')
+      }
     })
   }
 
@@ -264,3 +274,5 @@ export function useAccountCenter(options) {
     confirmVipPay,
   }
 }
+
+

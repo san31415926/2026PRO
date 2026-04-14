@@ -14,8 +14,8 @@
           <div class="shop-line"><van-icon name="shop-o" /> Smart Mall 自营店</div>
           <div class="goods-row"><img :src="currentOrderDetail.img" class="detail-goods-img" /><div class="g-right"><div class="g-title">{{ currentOrderDetail.title }}</div><div class="g-sub">官方直发 · 品质保障 · 支持售后</div><div class="g-price">¥ {{ currentOrderDetail.amount.toFixed(2) }}</div></div></div>
           <div class="contact-line">
-            <van-button size="small" icon="service-o" round @click="openQQPopup">联系客服</van-button>
-            <van-button size="small" icon="phone-o" round @click="openPhonePopup">拨打电话</van-button>
+            <van-button size="small" icon="service-o" round @click="handleContactQQ">联系客服</van-button>
+            <van-button size="small" icon="phone-o" round @click="handleContactPhone">拨打电话</van-button>
           </div>
         </div>
         <div class="card detail-meta"><div class="meta-row"><span>订单编号</span><span>{{ currentOrderDetail.no }}</span></div><div class="meta-row"><span>下单时间</span><span>{{ currentOrderDetail.date }}</span></div><div class="meta-row"><span>支付方式</span><span>在线支付</span></div></div>
@@ -49,10 +49,10 @@ defineProps({
   logisticsTraces: { type: Array, default: () => [] },
   getStatusText: { type: Function, required: true },
   cancelOrder: { type: Function, required: true },
-  openQQPopup: { type: Function, required: true },
-  openPhonePopup: { type: Function, required: true },
 })
 
-const emit = defineEmits(['update:show'])
+const emit = defineEmits(['update:show', 'contact-qq', 'contact-phone'])
 const closeDetail = () => emit('update:show', false)
+const handleContactQQ = () => emit('contact-qq')
+const handleContactPhone = () => emit('contact-phone')
 </script>

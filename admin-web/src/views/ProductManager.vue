@@ -8,7 +8,7 @@
         </div>
       </template>
 
-      <el-table :data="productList" border stripe>
+      <el-table :data="productList" border stripe class="product-table">
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column label="图片" width="88">
           <template #default="scope">
@@ -369,12 +369,36 @@ onMounted(() => {
   font-weight: 700;
 }
 
-.table-thumb {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  object-fit: cover;
+.product-table :deep(.thumb-column .cell) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.thumb-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 14px;
   background: #f5f7fa;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
+}
+
+.table-thumb {
+  display: block;
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  max-width: 64px;
+  min-height: 64px;
+  max-height: 64px;
+  object-fit: cover;
+  aspect-ratio: 1 / 1;
 }
 
 .tag-item {

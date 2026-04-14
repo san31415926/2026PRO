@@ -1,4 +1,4 @@
-"""
+﻿"""
 SmartMall 后端单元测试
 运行方式：
     cd backend
@@ -13,7 +13,7 @@ import datetime
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from app import app as flask_app, db, Member, Product, SystemCoupon, UserCoupon, Address, Order, Admin, SystemConfig
+from app import app as flask_app, db, Member, Product, SystemCoupon, UserCoupon, Address, Order, Admin, SystemConfig, GroupTeam
 
 
 # ─────────────────────────── fixtures ───────────────────────────
@@ -125,6 +125,19 @@ class TestAuth:
         r = client.post('/api/mobile/login',
                         json={'username': 'user1', 'password': 'wrong'})
         assert r.json['code'] == 401
+
+    def test_session_user_after_login(self, client):
+        login(client)
+        r = client.get('/api/mobile/session_user')
+        assert r.json['code'] == 200
+        assert r.json['data']['nickname'] == '测试用户'
+
+    def test_logout_clears_session(self, client):
+        login(client)
+        logout_res = client.post('/api/mobile/logout')
+        assert logout_res.json['code'] == 200
+        session_res = client.get('/api/mobile/session_user')
+        assert session_res.json['code'] == 401
 
     def test_new_user_initial_data(self, client):
         """新注册用户初始余额 10000，积分 500"""
@@ -238,11 +251,11 @@ class TestCart:
         r = client.get('/api/mobile/cart/list')
         assert r.json['data'][0]['num'] == 2
 
-    def test_seckill_product_cannot_add_to_cart(self, app, client):
+    def test_seckill_product_can_add_to_cart(self, app, client):
         login(client)
         pid = get_product_id(app, '限量秒杀耳机')
         r = client.post('/api/mobile/cart/add', json={'product_id': pid})
-        assert r.json['code'] == 400
+        assert r.json['code'] == 200
 
     def test_delete_cart_item(self, app, client):
         """将购物车数量设为 0 等于删除"""
@@ -269,6 +282,164 @@ class TestOrder:
         client.post('/api/mobile/address',
                     json={'name': '张三', 'phone': '13800000000', 'detail': '北京市海淀区'})
         return client.get('/api/mobile/address').json['data'][0]['id']
+
+    def test_group_create_order_stays_pending(self, app, client):
+        login(client)
+        addr_id = self._prepare_address(client)
+        pid = get_product_id(app, '拼团手机')
+        res = client.post('/api/mobile/order', json={
+            'product_id': pid,
+            'address_id': addr_id,
+            'group_action': 'create',
+        })
+        assert res.json['code'] == 200
+        with app.app_context():
+            order = Order.query.get(res.json['order_id'])
+            team = GroupTeam.query.get(order.group_team_id)
+            assert order.status == 5
+            assert team.status == 0
+            assert team.current_num == 1
+
+    def test_group_join_before_target_keeps_pending(self, app, client):
+        with app.app_context():
+            cfg = SystemConfig.query.filter_by(key='group_buy_people').first()
+            cfg.value = '3'
+            db.session.commit()
+
+        login(client)
+        addr_id = self._prepare_address(client)
+        pid = get_product_id(app, '拼团手机')
+        create_res = client.post('/api/mobile/order', json={
+            'product_id': pid,
+            'address_id': addr_id,
+            'group_action': 'create',
+        })
+        group_code = create_res.json['group_code']
+
+        login(client, 'vip_user')
+        addr_id2 = self._prepare_address(client)
+        join_res = client.post('/api/mobile/order', json={
+            'product_id': pid,
+            'address_id': addr_id2,
+            'group_action': 'join',
+            'group_code': group_code,
+        })
+        assert join_res.json['code'] == 200
+
+        with app.app_context():
+            team = GroupTeam.query.filter_by(code=group_code).first()
+            orders = Order.query.filter_by(group_team_id=team.id).order_by(Order.id.asc()).all()
+            assert team.status == 0
+            assert team.current_num == 2
+            assert len(orders) == 2
+            assert all(order.status == 5 for order in orders)
+
+    def test_group_create_duplicate_request_reuses_same_order(self, app, client):
+        login(client)
+        addr_id = self._prepare_address(client)
+        pid = get_product_id(app, '拼团手机')
+
+        first_res = client.post('/api/mobile/order', json={
+            'product_id': pid,
+            'address_id': addr_id,
+            'group_action': 'create',
+        })
+        second_res = client.post('/api/mobile/order', json={
+            'product_id': pid,
+            'address_id': addr_id,
+            'group_action': 'create',
+        })
+
+        assert first_res.json['code'] == 200
+        assert second_res.json['code'] == 200
+        assert second_res.json['order_id'] == first_res.json['order_id']
+        assert second_res.json['group_code'] == first_res.json['group_code']
+
+        with app.app_context():
+            user = Member.query.filter_by(username='user1').first()
+            orders = Order.query.filter_by(user_id=user.id, product_id=pid).all()
+            pending_orders = [order for order in orders if order.status == 5]
+            assert len(pending_orders) == 1
+
+    def test_group_join_duplicate_request_reuses_same_order(self, app, client):
+        with app.app_context():
+            cfg = SystemConfig.query.filter_by(key='group_buy_people').first()
+            cfg.value = '3'
+            db.session.commit()
+
+        login(client)
+        addr_id = self._prepare_address(client)
+        pid = get_product_id(app, '拼团手机')
+        create_res = client.post('/api/mobile/order', json={
+            'product_id': pid,
+            'address_id': addr_id,
+            'group_action': 'create',
+        })
+        group_code = create_res.json['group_code']
+
+        login(client, 'vip_user')
+        addr_id2 = self._prepare_address(client)
+        first_join = client.post('/api/mobile/order', json={
+            'product_id': pid,
+            'address_id': addr_id2,
+            'group_action': 'join',
+            'group_code': group_code,
+        })
+        second_join = client.post('/api/mobile/order', json={
+            'product_id': pid,
+            'address_id': addr_id2,
+            'group_action': 'join',
+            'group_code': group_code,
+        })
+
+        assert first_join.json['code'] == 200
+        assert second_join.json['code'] == 200
+        assert second_join.json['order_id'] == first_join.json['order_id']
+        assert second_join.json['group_code'] == group_code
+
+        with app.app_context():
+            team = GroupTeam.query.filter_by(code=group_code).first()
+            vip_user = Member.query.filter_by(username='vip_user').first()
+            join_orders = Order.query.filter_by(
+                user_id=vip_user.id,
+                product_id=pid,
+                group_team_id=team.id,
+            ).all()
+            assert len(join_orders) == 1
+
+    def test_my_orders_hides_legacy_duplicate_group_orders(self, app, client):
+        login(client)
+        addr_id = self._prepare_address(client)
+        pid = get_product_id(app, '拼团手机')
+        create_res = client.post('/api/mobile/order', json={
+            'product_id': pid,
+            'address_id': addr_id,
+            'group_action': 'create',
+        })
+        order_id = create_res.json['order_id']
+
+        with app.app_context():
+            source_order = Order.query.get(order_id)
+            duplicate_order = Order(
+                order_no='ORDDUP1',
+                user_id=source_order.user_id,
+                product_title=source_order.product_title,
+                product_img=source_order.product_img,
+                total_amount=source_order.total_amount,
+                status=source_order.status,
+                address_snapshot=source_order.address_snapshot,
+                category=source_order.category,
+                group_team_id=source_order.group_team_id,
+                product_id=source_order.product_id,
+                is_seckill_order=source_order.is_seckill_order,
+            )
+            db.session.add(duplicate_order)
+            db.session.commit()
+
+        my_orders_res = client.get('/api/mobile/my_orders')
+        assert my_orders_res.json['code'] == 200
+        visible_group_orders = [item for item in my_orders_res.json['data'] if item['title'] == '拼团手机']
+        assert len(visible_group_orders) == 1
 
     def test_create_order_normal(self, app, client):
         """普通用户下单，全价购买"""

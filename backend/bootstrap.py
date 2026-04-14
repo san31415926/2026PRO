@@ -49,6 +49,12 @@ def ensure_schema_updates():
             conn.execute(text("ALTER TABLE member ADD COLUMN hero_text VARCHAR(100) DEFAULT '鸟为什么会飞'"))
             conn.commit()
 
+        if 'status' not in member_cols:
+            conn.execute(text('ALTER TABLE member ADD COLUMN status INT DEFAULT 1'))
+            conn.commit()
+            conn.execute(text('UPDATE member SET status = 1 WHERE status IS NULL'))
+            conn.commit()
+
         address_cols = [c['name'] for c in inspector.get_columns('address')]
         if 'is_default' not in address_cols:
             conn.execute(text('ALTER TABLE address ADD COLUMN is_default BOOLEAN DEFAULT 0'))

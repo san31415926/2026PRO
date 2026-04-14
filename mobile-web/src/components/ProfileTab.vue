@@ -1,5 +1,12 @@
 <template>
-  <div class="tab-page">
+  <div
+    class="tab-page"
+    :style="{
+      background: currentUser && isVip
+        ? 'linear-gradient(180deg, rgba(248, 239, 229, 0.98) 0%, rgba(244, 232, 217, 0.96) 38%, rgba(246, 241, 235, 0.98) 100%)'
+        : 'transparent'
+    }"
+  >
     <div v-if="!currentUser" class="login-wrapper">
       <div class="login-card">
         <div class="login-header"><h3>Smart Mall</h3><p>登录享受更多权益</p></div>
@@ -40,10 +47,21 @@
               {{ currentUser.nickname }}
               <van-icon name="edit" style="margin-left: 8px; font-size: 16px; opacity: 0.8;" @click.stop="openEditName" />
               <span
-                style="font-size:12px; font-weight:normal; margin-left:10px; opacity:0.6; border:1px solid rgba(255,255,255,0.5); padding:0px 6px; border-radius:10px; cursor:pointer;"
+                :style="{
+                  fontSize: '12px',
+                  fontWeight: 'normal',
+                  marginLeft: '10px',
+                  opacity: 0.85,
+                  border: isVip ? '1px solid rgba(127, 93, 80, 0.28)' : '1px solid rgba(255,255,255,0.5)',
+                  background: isVip ? 'rgba(255,255,255,0.62)' : 'transparent',
+                  color: isVip ? '#7f5d50' : 'inherit',
+                  padding: '0px 8px',
+                  borderRadius: '10px',
+                  cursor: 'pointer'
+                }"
                 @click.stop="logout"
               >
-                <van-icon name="exchange" /> 切换
+                <van-icon name="revoke" /> 退出登录
               </span>
             </div>
             <div class="level-badge"><van-icon name="gem" /> {{ vipLevelName }}</div>

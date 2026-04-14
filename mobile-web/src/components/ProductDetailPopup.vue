@@ -4,10 +4,10 @@
     class="sheet-popup mobile-shell-popup"
     position="bottom"
     :style="{ height: '100%', background: 'rgba(84, 49, 36, 0.18)' }"
-    closeable
     @update:show="updateShow"
   >
     <div v-if="selectedItem" class="popup-mobile-shell product-detail-shell">
+      <button class="product-detail-close" type="button" @click="updateShow(false)">×</button>
       <div style="height:350px; position:relative;">
         <img :src="selectedItem.img" style="width:100%; height:100%; object-fit:cover;">
         <div v-if="isSeckillItem" class="seckill-bar-modal">
@@ -36,7 +36,7 @@
 
         <div v-if="isSeckillItem" style="background:#fff7f7; border:1px solid #ffebeb; padding:15px; border-radius:10px; margin-bottom:20px;">
           <div style="font-weight:bold; color:#ee0a24; margin-bottom:5px;"><van-icon name="warning-o" /> 秒杀规则：</div>
-          <div style="font-size:13px; color:#666; line-height:1.6;">1. 秒杀商品仅可直接购买，不支持加入购物车。<br>2. 每人限购 {{ selectedItem.seckill_limit_per_user || 1 }} 件，当前剩余 {{ selectedItem.display_stock }} 件。<br>3. 秒杀商品不支持优惠券和积分抵扣，活动结束后自动恢复常规展示。</div>
+          <div style="font-size:13px; color:#666; line-height:1.6;">1. 秒杀商品支持加入购物车，但购物车结算时不支持优惠券和积分。<br>2. 每人限购 {{ selectedItem.seckill_limit_per_user || 1 }} 件，当前剩余 {{ selectedItem.display_stock }} 件。<br>3. 秒杀商品活动结束后会自动恢复常规展示，请尽快完成支付。</div>
         </div>
 
         <div v-if="isSeckillItem" class="seckill-detail-grid">
@@ -79,7 +79,15 @@
       </div>
 
       <div class="product-detail-footer" style="padding:10px 20px; background:white; display:flex; gap:15px; border-top:1px solid #eee;">
-        <van-button v-if="!isSeckillItem" block round color="#ff976a" :disabled="selectedItem.stock === 0" @click="handleAddToCart(selectedItem)">加入购物车</van-button>
+        <van-button
+          block
+          round
+          color="#ff976a"
+          :disabled="isSeckillItem ? selectedItem.display_stock === 0 : selectedItem.stock === 0"
+          @click="handleAddToCart(selectedItem)"
+        >
+          加入购物车
+        </van-button>
         <div class="btn-icon fav" style="width:44px;height:44px;border:1px solid #eee;margin-right:-5px;" @click.stop="toggleFavorite(selectedItem)">
           <van-icon :name="isFav(selectedItem.id) ? 'like' : 'like-o'" :color="isFav(selectedItem.id) ? '#ee0a24' : '#666'" size="20" />
         </div>
@@ -129,3 +137,29 @@ defineProps({
 const emit = defineEmits(['update:show'])
 const updateShow = value => emit('update:show', value)
 </script>
+
+<style scoped>
+.product-detail-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(31, 20, 17, 0.42);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+}
+
+.product-detail-close:active {
+  transform: scale(0.96);
+}
+</style>

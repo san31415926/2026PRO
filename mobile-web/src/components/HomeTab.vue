@@ -1,6 +1,20 @@
 <template>
-  <div class="tab-page">
-    <div class="header-search-box home-search-shell" :style="{ background: isVip ? '#2f2a27' : 'transparent' }">
+  <div
+    class="tab-page"
+    :style="{
+      background: isVip
+        ? 'linear-gradient(180deg, rgba(248, 239, 229, 0.98) 0%, rgba(244, 232, 217, 0.96) 38%, rgba(246, 241, 235, 0.98) 100%)'
+        : 'transparent'
+    }"
+  >
+    <div
+      class="header-search-box home-search-shell"
+      :style="{
+        background: isVip
+          ? 'linear-gradient(180deg, rgba(248, 239, 229, 0.96), rgba(242, 229, 214, 0.94))'
+          : 'transparent'
+      }"
+    >
       <div class="home-search-card">
         <div class="home-search-top">
           <div>
@@ -145,7 +159,7 @@
                 <div class="btn-icon fav" @click.stop="toggleFavorite(item)">
                   <van-icon :name="isFav(item.id) ? 'like' : 'like-o'" :color="isFav(item.id) ? '#ee0a24' : '#666'" />
                 </div>
-                <div v-if="!item.is_seckill" class="btn-icon cart" @click.stop="handleAddToCart(item)">
+                <div class="btn-icon cart" @click.stop="handleAddToCart(item)">
                   <van-icon name="cart-o" />
                 </div>
               </div>

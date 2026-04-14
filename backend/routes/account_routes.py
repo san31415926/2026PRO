@@ -1,4 +1,4 @@
-import os
+﻿import os
 import random
 import uuid
 
@@ -189,6 +189,9 @@ def register_account_routes(app, upload_folder):
         ).first()
         if not user:
             return jsonify({'code': 401, 'msg': '错误'})
+        if getattr(user, 'status', 1) != 1:
+            return jsonify({'code': 403, 'msg': '账号已被冻结，请联系管理员'})
+        session.clear()
         session['user_id'] = user.id
         return jsonify({
             'code': 200,
@@ -196,12 +199,35 @@ def register_account_routes(app, upload_folder):
                 'id': user.id,
                 'nickname': user.nickname,
                 'level': user.level,
+                'status': getattr(user, 'status', 1) or 1,
                 'balance': float(user.balance),
                 'points': user.points,
                 'avatar': user.avatar,
                 'hero_text': user.hero_text or '鸟为什么会飞',
             },
         })
+
+    @app.route('/api/mobile/session_user', methods=['GET'])
+    def get_session_user():
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'code': 401, 'msg': '请先登录'})
+        user = Member.query.get(user_id)
+        if not user:
+            session.pop('user_id', None)
+            return jsonify({'code': 401, 'msg': '请先登录'})
+        return jsonify({
+            'code': 200,
+            'data': {
+                'id': user.id,
+                'nickname': user.nickname,
+            },
+        })
+
+    @app.route('/api/mobile/logout', methods=['POST'])
+    def mobile_logout():
+        session.pop('user_id', None)
+        return jsonify({'code': 200, 'msg': '退出成功'})
 
     @app.route('/api/mobile/signin', methods=['POST'])
     def user_signin():

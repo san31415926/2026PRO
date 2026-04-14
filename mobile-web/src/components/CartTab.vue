@@ -11,7 +11,10 @@
         <div class="cart-info">
           <div class="cart-title">{{ item.title }}</div>
           <div class="cart-footer">
-            <div class="cart-price">¥ {{ Number(item.price).toFixed(2) }}</div>
+            <div class="cart-price">
+              ¥ {{ Number(item.display_price ?? item.price).toFixed(2) }}
+              <span v-if="item.is_seckill" class="cart-old-price">¥ {{ Number(item.price).toFixed(2) }}</span>
+            </div>
             <div class="cart-stepper">
               <van-stepper v-model="item.num" theme="round" button-size="22" disable-input @change="updateCartNum(item)" />
               <van-icon name="delete" color="#999" style="margin-left:10px;" @click="updateCartNum(item, 0)" />
@@ -52,3 +55,13 @@ const allCheckedProxy = computed({
   set: (value) => emit('update:isAllChecked', value),
 })
 </script>
+
+<style scoped>
+.cart-old-price {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #999;
+  text-decoration: line-through;
+  font-weight: 400;
+}
+</style>

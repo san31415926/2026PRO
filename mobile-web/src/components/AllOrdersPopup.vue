@@ -7,11 +7,11 @@
     @update:show="updateShow"
   >
     <div class="popup-mobile-shell all-orders-shell">
-      <van-nav-bar title="我的订单" fixed placeholder z-index="100" left-arrow @click-left="closePopup" />
+      <van-nav-bar title="我的订单" left-arrow @click-left="closePopup" />
       <van-tabs
         :active="activeOrderTab"
         sticky
-        offset-top="46"
+        offset-top="0"
         background="#fff"
         color="#ee0a24"
         title-active-color="#ee0a24"
