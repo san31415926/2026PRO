@@ -14,6 +14,7 @@
           <el-menu-item index="coupon_settings"><el-icon><Ticket /></el-icon><span>领劵中心设置</span></el-menu-item>
           <el-menu-item index="group_settings"><el-icon><UserFilled /></el-icon><span>拼团设置</span></el-menu-item>
           <el-menu-item index="seckill_settings"><el-icon><Timer /></el-icon><span>秒杀设置</span></el-menu-item>
+          <el-menu-item index="members"><el-icon><User /></el-icon><span>会员管理</span></el-menu-item>
         </el-menu>
       </el-aside>
       <el-container>
@@ -31,7 +32,7 @@
           </div>
         </el-header>
         <el-main class="main-content">
-          <DashboardView v-if="activeMenu === 'dashboard'" />
+          <DashboardView v-if="activeMenu === 'dashboard'" @navigate="handleMenuSelect" />
           <BannerManager v-if="activeMenu === 'banners'" />
           <ProductManager v-if="activeMenu === 'goods'" />
           <OrderManager v-if="activeMenu === 'orders'" />
@@ -39,6 +40,7 @@
           <CouponManager v-if="activeMenu === 'coupon_settings'" />
           <GroupSettings v-if="activeMenu === 'group_settings'" />
           <SeckillSettings v-if="activeMenu === 'seckill_settings'" />
+          <MemberManager v-if="activeMenu === 'members'" />
         </el-main>
       </el-container>
     </el-container>
@@ -47,7 +49,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { Shop, Odometer, Picture, Goods, List, ChatDotSquare, Ticket, UserFilled, Timer } from '@element-plus/icons-vue'
+import { Shop, Odometer, Picture, Goods, List, ChatDotSquare, Ticket, UserFilled, Timer, User } from '@element-plus/icons-vue'
 
 // Views
 import LoginView from './views/LoginView.vue'
@@ -59,6 +61,7 @@ import CommentManager from './views/CommentManager.vue'
 import CouponManager from './views/CouponManager.vue'
 import GroupSettings from './views/GroupSettings.vue'
 import SeckillSettings from './views/SeckillSettings.vue'
+import MemberManager from './views/MemberManager.vue'
 
 const isLogin = ref(false)
 const userInfo = ref({ nickname: '张捷', avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png' })
@@ -74,8 +77,7 @@ const handleMenuSelect = (index) => {
     activeMenu.value = index;
     const map = {
         'dashboard':'数据分析管理', 'banners':'轮播图管理', 'goods':'商品管理中心', 'orders':'订单处理系统', 'comments': '评价管理',
-        'coupon_settings': '领劵中心设置',
-        'group_settings': '拼团设置', 'seckill_settings': '秒杀设置'
+        'coupon_settings': '领劵中心设置', 'group_settings': '拼团设置', 'seckill_settings': '秒杀设置', 'members': '会员管理'
     };
     currentTitle.value = map[index] || '首页';
 }
