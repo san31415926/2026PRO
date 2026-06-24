@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <defs>
+    <style>
+      .title { font: 700 28px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .caption { font: 24px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .box-title { font: 700 22px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .text { font: 19px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .box { fill: #fff; stroke: #222; stroke-width: 2.4; rx: 10; ry: 10; }
+      .panel { fill: #fafafa; stroke: #222; stroke-width: 2.6; rx: 12; ry: 12; }
+      .line { stroke: #222; stroke-width: 2.2; fill: none; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#222"/>
+    </marker>
+  </defs>
+
+  <text x="700" y="50" text-anchor="middle" class="title">图3.1 系统总体架构图</text>
+
+  <rect x="90" y="190" width="280" height="180" class="box"/>
+  <text x="230" y="230" text-anchor="middle" class="box-title">移动端用户商城</text>
+  <text x="230" y="278" text-anchor="middle" class="text">首页浏览</text>
+  <text x="230" y="314" text-anchor="middle" class="text">购物车与结算</text>
+  <text x="230" y="350" text-anchor="middle" class="text">个人中心</text>
+
+  <rect x="1030" y="190" width="280" height="180" class="box"/>
+  <text x="1170" y="230" text-anchor="middle" class="box-title">PC端后台管理系统</text>
+  <text x="1170" y="278" text-anchor="middle" class="text">商品与订单管理</text>
+  <text x="1170" y="314" text-anchor="middle" class="text">会员与优惠券管理</text>
+  <text x="1170" y="350" text-anchor="middle" class="text">拼团与秒杀配置</text>
+
+  <rect x="500" y="170" width="400" height="220" class="box"/>
+  <text x="700" y="215" text-anchor="middle" class="box-title">Flask 后端接口服务</text>
+  <text x="700" y="265" text-anchor="middle" class="text">账号与权限接口</text>
+  <text x="700" y="301" text-anchor="middle" class="text">商品 / 订单 / 会员接口</text>
+  <text x="700" y="337" text-anchor="middle" class="text">拼团 / 秒杀 / 优惠券接口</text>
+
+  <rect x="500" y="500" width="400" height="180" class="box"/>
+  <text x="700" y="545" text-anchor="middle" class="box-title">MySQL 数据库</text>
+  <text x="700" y="595" text-anchor="middle" class="text">用户、商品、订单</text>
+  <text x="700" y="631" text-anchor="middle" class="text">地址、购物车、评论、活动配置</text>
+
+  <line x1="370" y1="280" x2="500" y2="280" class="line" marker-end="url(#arrow)"/>
+  <line x1="1030" y1="280" x2="900" y2="280" class="line" marker-end="url(#arrow)"/>
+  <line x1="700" y1="390" x2="700" y2="500" class="line" marker-end="url(#arrow)"/>
+
+  <line x1="540" y1="500" x2="540" y2="390" class="line" marker-end="url(#arrow)"/>
+  <line x1="860" y1="500" x2="860" y2="390" class="line" marker-end="url(#arrow)"/>
+
+  <text x="435" y="262" text-anchor="middle" class="text">HTTP/JSON</text>
+  <text x="965" y="262" text-anchor="middle" class="text">HTTP/JSON</text>
+  <text x="500" y="454" text-anchor="middle" class="text">数据读取</text>
+  <text x="724" y="454" class="text">数据写入</text>
+  <text x="900" y="454" text-anchor="middle" class="text">数据读取</text>
+
+  <text x="700" y="845" text-anchor="middle" class="caption">系统采用前后端分离的 B/S 架构，用户端与管理端均通过 Flask 接口访问 MySQL 数据库。</text>
+</svg>

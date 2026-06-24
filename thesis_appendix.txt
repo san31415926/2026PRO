@@ -1,0 +1,74 @@
+附录
+
+系统核心代码设计
+
+用户注册
+
+用户注册功能主要用于接收前端提交的用户名和密码，并完成账号唯一性校验和用户初始化。当前系统在注册时会先查询数据库中是否已存在相同账号，若账号未重复，则创建新的用户记录，并为新用户初始化余额、积分和新人优惠券等基础权益。该设计保证了新用户在注册完成后即可直接进入商城使用相关功能。
+
+用户注册核心代码如下。
+
+```python
+@app.route('/api/mobile/register', methods=['POST'])
+def mobile_register():
+    if Member.query.filter_by(username=request.json['username']).first():
+        return jsonify({'code': 400, 'msg': '账号已存在'})
+    user = Member(
+        username=request.json['username'],
+        password=request.json['password'],
+        nickname=f'用户{random.randint(100, 999)}',
+        balance=10000.00,
+        points=500,
+    )
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({'code': 200, 'msg': '注册成功'})
+```
+
+订单创建
+
+订单创建逻辑是系统业务处理中最关键的部分之一。系统在创建订单时，需要先校验收货地址和商品是否存在，再根据商品类型判断是普通商品、拼团商品还是秒杀商品，并继续完成金额计算、余额校验和库存处理等操作。该逻辑保证了订单生成过程中的主要业务规则能够得到统一控制。
+
+订单创建核心代码如下。
+
+```python
+@app.route('/api/mobile/order', methods=['POST'])
+def create_order():
+    user_id = session.get('user_id')
+    data = request.json or {}
+    product = Product.query.get(data.get('product_id'))
+    user = Member.query.get(user_id)
+    address = Address.query.get(data.get('address_id'))
+    if not address:
+        return jsonify({'code': 400, 'msg': '请选择地址'})
+    if not product:
+        return jsonify({'code': 404, 'msg': '商品不存在'})
+    if user.balance < product.price:
+        return jsonify({'code': 400, 'msg': '余额不足'})
+```
+
+后台统计
+
+后台统计模块主要用于汇总商城运行数据，并将结果返回给数据看板页面进行展示。系统在后台统计接口中，对订单、商品和会员等数据进行聚合处理，得到总销售额、订单数量和会员数量等核心指标，为后台管理端提供基础数据支撑。
+
+后台统计核心代码如下。
+
+```python
+@app.route('/api/admin/stats', methods=['GET'])
+def get_stats():
+    total_sales = float(db.session.query(func.sum(Order.total_amount)).scalar() or 0)
+    total_orders = Order.query.count()
+    total_products = Product.query.filter_by(is_on_sale=True).count()
+    total_members = Member.query.count()
+    return jsonify({
+        'code': 200,
+        'data': {
+            'total_sales': total_sales,
+            'total_orders': total_orders,
+            'total_products': total_products,
+            'total_members': total_members,
+        },
+    })
+```
+
+以上代码从用户注册、订单创建和后台统计三个方面展示了本系统的核心实现思路。通过这些精简代码可以看出，系统在实现过程中围绕账户管理、订单处理和后台运营三个重点模块展开，能够较好地支撑数码电子商城系统的基本业务需求。

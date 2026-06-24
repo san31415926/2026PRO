@@ -1,0 +1,11 @@
+{
+  "name": "defense-ppt-builder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generate thesis defense presentation for SmartMall_BiShe",
+  "main": "build_defense_ppt.js",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "pptxgenjs": "^3.12.0"
+  }
+}

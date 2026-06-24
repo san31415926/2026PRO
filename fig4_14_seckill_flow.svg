@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1460" viewBox="0 0 1280 1460">
+  <defs>
+    <style>
+      .t { font: 700 28px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .n { font: 22px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .box { fill: #fff; stroke: #222; stroke-width: 2.2; }
+      .line { stroke: #222; stroke-width: 2.1; fill: none; }
+    </style>
+    <marker id="s14" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#222"/>
+    </marker>
+  </defs>
+  <text x="640" y="48" text-anchor="middle" class="t">图4.14 秒杀业务流程图</text>
+
+  <ellipse cx="640" cy="100" rx="72" ry="28" class="box"/>
+  <text x="640" y="108" text-anchor="middle" class="n">开始</text>
+
+  <rect x="490" y="160" width="300" height="56" class="box"/>
+  <text x="640" y="196" text-anchor="middle" class="n">选择秒杀商品并提交下单</text>
+
+  <polygon points="640,280 880,335 640,390 400,335" class="box"/>
+  <text x="640" y="343" text-anchor="middle" class="n">秒杀活动是否处于有效时间</text>
+
+  <rect x="970" y="308" width="190" height="54" class="box"/>
+  <text x="1065" y="343" text-anchor="middle" class="n">返回活动状态提示</text>
+
+  <polygon points="640,470 840,525 640,580 440,525" class="box"/>
+  <text x="640" y="533" text-anchor="middle" class="n">秒杀商品是否已售罄</text>
+
+  <rect x="970" y="498" width="170" height="54" class="box"/>
+  <text x="1055" y="533" text-anchor="middle" class="n">返回售罄提示</text>
+
+  <polygon points="640,660 900,715 640,770 380,715" class="box"/>
+  <text x="640" y="723" text-anchor="middle" class="n">是否使用优惠券或积分抵扣</text>
+
+  <rect x="970" y="688" width="210" height="54" class="box"/>
+  <text x="1075" y="723" text-anchor="middle" class="n">返回不支持抵扣提示</text>
+
+  <polygon points="640,850 870,905 640,960 410,905" class="box"/>
+  <text x="640" y="913" text-anchor="middle" class="n">是否超过每人限购数量</text>
+
+  <rect x="970" y="878" width="190" height="54" class="box"/>
+  <text x="1065" y="913" text-anchor="middle" class="n">返回限购数量提示</text>
+
+  <polygon points="640,1040 840,1095 640,1150 440,1095" class="box"/>
+  <text x="640" y="1103" text-anchor="middle" class="n">用户余额是否充足</text>
+
+  <rect x="970" y="1068" width="170" height="54" class="box"/>
+  <text x="1055" y="1103" text-anchor="middle" class="n">返回余额不足</text>
+
+  <rect x="490" y="1240" width="300" height="56" class="box"/>
+  <text x="640" y="1276" text-anchor="middle" class="n">扣减秒杀库存并生成订单</text>
+
+  <ellipse cx="640" cy="1390" rx="72" ry="28" class="box"/>
+  <text x="640" y="1398" text-anchor="middle" class="n">结束</text>
+
+  <line x1="640" y1="128" x2="640" y2="160" class="line" marker-end="url(#s14)"/>
+  <line x1="640" y1="216" x2="640" y2="280" class="line" marker-end="url(#s14)"/>
+
+  <line x1="880" y1="335" x2="970" y2="335" class="line" marker-end="url(#s14)"/>
+  <text x="910" y="322" class="n">否</text>
+  <line x1="1160" y1="335" x2="1220" y2="335" class="line"/>
+
+  <line x1="640" y1="390" x2="640" y2="470" class="line" marker-end="url(#s14)"/>
+  <text x="660" y="428" class="n">是</text>
+
+  <line x1="840" y1="525" x2="970" y2="525" class="line" marker-end="url(#s14)"/>
+  <text x="874" y="512" class="n">是</text>
+  <line x1="1140" y1="525" x2="1220" y2="525" class="line"/>
+
+  <line x1="640" y1="580" x2="640" y2="660" class="line" marker-end="url(#s14)"/>
+  <text x="660" y="618" class="n">否</text>
+
+  <line x1="900" y1="715" x2="970" y2="715" class="line" marker-end="url(#s14)"/>
+  <text x="922" y="702" class="n">是</text>
+  <line x1="1180" y1="715" x2="1220" y2="715" class="line"/>
+
+  <line x1="640" y1="770" x2="640" y2="850" class="line" marker-end="url(#s14)"/>
+  <text x="660" y="808" class="n">否</text>
+
+  <line x1="870" y1="905" x2="970" y2="905" class="line" marker-end="url(#s14)"/>
+  <text x="900" y="892" class="n">是</text>
+  <line x1="1160" y1="905" x2="1220" y2="905" class="line"/>
+
+  <line x1="640" y1="960" x2="640" y2="1040" class="line" marker-end="url(#s14)"/>
+  <text x="660" y="998" class="n">否</text>
+
+  <line x1="840" y1="1095" x2="970" y2="1095" class="line" marker-end="url(#s14)"/>
+  <text x="874" y="1082" class="n">否</text>
+  <line x1="1140" y1="1095" x2="1220" y2="1095" class="line"/>
+  <line x1="1220" y1="335" x2="1220" y2="1390" class="line"/>
+  <line x1="1220" y1="1390" x2="712" y2="1390" class="line" marker-end="url(#s14)"/>
+
+  <line x1="640" y1="1150" x2="640" y2="1240" class="line" marker-end="url(#s14)"/>
+  <text x="660" y="1188" class="n">是</text>
+  <line x1="640" y1="1296" x2="640" y2="1362" class="line" marker-end="url(#s14)"/>
+</svg>
