@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(grep -E \"\\\\.\\(md|txt|yml|yaml\\)$\")",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(venv/Scripts/pip install:*)",
+      "Bash(venv/Scripts/python -m pytest tests/ -v)",
+      "Bash(venv/Scripts/python -m pytest tests/ -v --tb=no)"
     ]
   }
 }

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="980" viewBox="0 0 900 980">
+  <defs>
+    <style>
+      .t { font: 700 26px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .n { font: 22px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .box { fill: #fff; stroke: #222; stroke-width: 2.2; }
+      .line { stroke: #222; stroke-width: 2.1; fill: none; }
+    </style>
+    <marker id="a3" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker>
+  </defs>
+  <text x="450" y="48" text-anchor="middle" class="t">图4.5 用户登录流程图</text>
+  <ellipse cx="450" cy="100" rx="70" ry="28" class="box"/><text x="450" y="108" text-anchor="middle" class="n">开始</text>
+  <rect x="350" y="160" width="200" height="54" class="box"/><text x="450" y="195" text-anchor="middle" class="n">输入账号密码</text>
+  <polygon points="450,260 620,310 450,360 280,310" class="box"/><text x="450" y="318" text-anchor="middle" class="n">账号是否存在</text>
+  <rect x="635" y="284" width="150" height="52" class="box"/><text x="710" y="318" text-anchor="middle" class="n">登录失败</text>
+  <polygon points="450,420 620,470 450,520 280,470" class="box"/><text x="450" y="478" text-anchor="middle" class="n">密码是否正确</text>
+  <rect x="635" y="444" width="150" height="52" class="box"/><text x="710" y="478" text-anchor="middle" class="n">返回错误提示</text>
+  <polygon points="450,580 620,630 450,680 280,630" class="box"/><text x="450" y="638" text-anchor="middle" class="n">账号状态是否正常</text>
+  <rect x="635" y="604" width="160" height="52" class="box"/><text x="715" y="638" text-anchor="middle" class="n">提示账号冻结</text>
+  <rect x="350" y="740" width="200" height="54" class="box"/><text x="450" y="775" text-anchor="middle" class="n">写入用户会话</text>
+  <rect x="350" y="830" width="200" height="54" class="box"/><text x="450" y="865" text-anchor="middle" class="n">返回登录成功</text>
+  <ellipse cx="450" cy="930" rx="70" ry="28" class="box"/><text x="450" y="938" text-anchor="middle" class="n">结束</text>
+  <line x1="450" y1="128" x2="450" y2="160" class="line" marker-end="url(#a3)"/>
+  <line x1="450" y1="214" x2="450" y2="260" class="line" marker-end="url(#a3)"/>
+  <line x1="620" y1="310" x2="635" y2="310" class="line" marker-end="url(#a3)"/>
+  <text x="595" y="298" class="n">否</text>
+  <line x1="785" y1="310" x2="845" y2="310" class="line"/>
+  <line x1="450" y1="360" x2="450" y2="420" class="line" marker-end="url(#a3)"/>
+  <text x="468" y="398" class="n">是</text>
+  <line x1="620" y1="470" x2="635" y2="470" class="line" marker-end="url(#a3)"/>
+  <text x="595" y="458" class="n">否</text>
+  <line x1="785" y1="470" x2="845" y2="470" class="line"/>
+  <line x1="450" y1="520" x2="450" y2="580" class="line" marker-end="url(#a3)"/>
+  <text x="468" y="558" class="n">是</text>
+  <line x1="620" y1="630" x2="635" y2="630" class="line" marker-end="url(#a3)"/>
+  <text x="595" y="618" class="n">否</text>
+  <line x1="795" y1="630" x2="845" y2="630" class="line"/>
+  <line x1="845" y1="310" x2="845" y2="930" class="line"/>
+  <line x1="845" y1="930" x2="520" y2="930" class="line" marker-end="url(#a3)"/>
+  <line x1="450" y1="680" x2="450" y2="740" class="line" marker-end="url(#a3)"/>
+  <text x="468" y="718" class="n">是</text>
+  <line x1="450" y1="794" x2="450" y2="830" class="line" marker-end="url(#a3)"/>
+  <line x1="450" y1="884" x2="450" y2="902" class="line" marker-end="url(#a3)"/>
+</svg>

@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2700" height="1500" viewBox="0 0 2700 1500">
+  <defs>
+    <style>
+      .title { font: 700 32px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .entity { fill: #fff; stroke: #222; stroke-width: 2.2; rx: 10; ry: 10; }
+      .name { font: 700 22px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .field { font: 18px 'Microsoft YaHei', SimSun, serif; fill: #111; }
+      .line { stroke: #222; stroke-width: 2.1; fill: none; }
+      .card { font: 18px 'Times New Roman', serif; fill: #111; }
+    </style>
+  </defs>
+
+  <text x="1350" y="60" text-anchor="middle" class="title">图3.3 系统 E-R 图</text>
+
+  <!-- 左列 -->
+  <rect x="120" y="160" width="430" height="150" class="entity"/>
+  <text x="335" y="200" text-anchor="middle" class="name">sys_admin 管理员信息表</text>
+  <text x="155" y="245" class="field">id / username / password</text>
+  <text x="155" y="282" class="field">nickname / avatar</text>
+
+  <rect x="120" y="430" width="430" height="160" class="entity"/>
+  <text x="335" y="470" text-anchor="middle" class="name">address 收货地址表</text>
+  <text x="155" y="515" class="field">id / user_id</text>
+  <text x="155" y="552" class="field">name / phone / detail / is_default</text>
+
+  <rect x="120" y="720" width="430" height="150" class="entity"/>
+  <text x="335" y="760" text-anchor="middle" class="name">cart 购物车表</text>
+  <text x="155" y="805" class="field">id / user_id</text>
+  <text x="155" y="842" class="field">product_id / num</text>
+
+  <rect x="120" y="1010" width="430" height="150" class="entity"/>
+  <text x="335" y="1050" text-anchor="middle" class="name">favorite 收藏表</text>
+  <text x="155" y="1095" class="field">id / user_id</text>
+  <text x="155" y="1132" class="field">product_id / created_at</text>
+
+  <!-- 中列 -->
+  <rect x="950" y="130" width="520" height="180" class="entity"/>
+  <text x="1210" y="172" text-anchor="middle" class="name">member 用户信息表</text>
+  <text x="985" y="220" class="field">id / username / password / nickname / phone</text>
+  <text x="985" y="257" class="field">balance / points / level / status</text>
+  <text x="985" y="294" class="field">avatar / hero_text</text>
+
+  <rect x="950" y="450" width="520" height="210" class="entity"/>
+  <text x="1210" y="492" text-anchor="middle" class="name">orders 订单信息表</text>
+  <text x="985" y="540" class="field">id / order_no / user_id / product_id</text>
+  <text x="985" y="577" class="field">product_title / total_amount / status</text>
+  <text x="985" y="614" class="field">address_snapshot / group_team_id</text>
+  <text x="985" y="651" class="field">is_seckill_order / created_at</text>
+
+  <rect x="950" y="820" width="520" height="190" class="entity"/>
+  <text x="1210" y="862" text-anchor="middle" class="name">product 商品信息表</text>
+  <text x="985" y="910" class="field">id / title / price / cover_img / category</text>
+  <text x="985" y="947" class="field">description / stock / is_on_sale / is_seckill</text>
+  <text x="985" y="984" class="field">seckill_price / seckill_stock / seckill_limit_per_user</text>
+
+  <rect x="950" y="1140" width="520" height="150" class="entity"/>
+  <text x="1210" y="1180" text-anchor="middle" class="name">sys_config 系统配置表</text>
+  <text x="985" y="1225" class="field">id / key / value / desc</text>
+
+  <!-- 右列 -->
+  <rect x="1850" y="130" width="470" height="160" class="entity"/>
+  <text x="2085" y="170" text-anchor="middle" class="name">sys_coupon 系统优惠券表</text>
+  <text x="1885" y="218" class="field">id / name / amount</text>
+  <text x="1885" y="255" class="field">min_spend / limit_level / stock / is_active</text>
+
+  <rect x="1850" y="390" width="470" height="160" class="entity"/>
+  <text x="2085" y="430" text-anchor="middle" class="name">user_coupon 用户优惠券表</text>
+  <text x="1885" y="478" class="field">id / user_id / sys_coupon_id</text>
+  <text x="1885" y="515" class="field">name / amount / min_spend / status</text>
+
+  <rect x="1850" y="650" width="470" height="160" class="entity"/>
+  <text x="2085" y="690" text-anchor="middle" class="name">comment 评论表</text>
+  <text x="1885" y="738" class="field">id / user_id / order_id</text>
+  <text x="1885" y="775" class="field">content / rating / created_at</text>
+
+  <rect x="1850" y="910" width="470" height="170" class="entity"/>
+  <text x="2085" y="950" text-anchor="middle" class="name">group_team 拼团队伍表</text>
+  <text x="1885" y="998" class="field">id / code / product_id / initiator_id</text>
+  <text x="1885" y="1035" class="field">current_num / status / created_at</text>
+
+  <!-- 关系线 -->
+  <line x1="550" y1="510" x2="950" y2="220" class="line"/>
+  <text x="720" y="348" class="card">1:N</text>
+
+  <line x1="550" y1="790" x2="950" y2="910" class="line"/>
+  <text x="720" y="838" class="card">1:N</text>
+
+  <line x1="550" y1="1080" x2="950" y2="930" class="line"/>
+  <text x="730" y="990" class="card">1:N</text>
+
+  <line x1="1470" y1="220" x2="1850" y2="470" class="line"/>
+  <text x="1642" y="330" class="card">1:N</text>
+
+  <line x1="2085" y1="290" x2="2085" y2="390" class="line"/>
+  <text x="2102" y="345" class="card">1:N</text>
+
+  <line x1="1470" y1="555" x2="1850" y2="730" class="line"/>
+  <text x="1648" y="632" class="card">1:N</text>
+
+  <line x1="1470" y1="900" x2="1850" y2="995" class="line"/>
+  <text x="1652" y="930" class="card">1:N</text>
+
+  <line x1="1210" y1="310" x2="1210" y2="450" class="line"/>
+  <text x="1228" y="390" class="card">1:N</text>
+
+  <line x1="1210" y1="660" x2="1210" y2="820" class="line"/>
+  <text x="1228" y="748" class="card">N:1</text>
+
+  <line x1="1210" y1="1010" x2="1210" y2="1140" class="line"/>
+  <text x="1228" y="1088" class="card">1:N</text>
+</svg>

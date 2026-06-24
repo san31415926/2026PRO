@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>数据库表结构设计</title>
+  <style>
+    body {
+      margin: 24px;
+      color: #111;
+      background: #fff;
+      font-family: "SimSun", "Songti SC", serif;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 20pt;
+      margin: 0 0 28px;
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 14pt;
+      font-weight: normal;
+      margin: 40px 0 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-bottom: 18px;
+      font-size: 12pt;
+    }
+
+    th, td {
+      border: 1px solid #222;
+      padding: 8px 6px;
+      text-align: center;
+      vertical-align: middle;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    th {
+      font-weight: bold;
+      background: #fafafa;
+    }
+
+    .col-no { width: 8%; }
+    .col-name { width: 17%; }
+    .col-type { width: 13%; }
+    .col-len { width: 10%; }
+    .col-null { width: 12%; }
+    .col-pk { width: 12%; }
+    .col-note { width: 28%; }
+
+    @media print {
+      body {
+        margin: 0;
+      }
+      .page {
+        max-width: none;
+      }
+      h2 {
+        page-break-after: avoid;
+      }
+      table {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>数据库逻辑结构设计表</h1>
+
+    <h2>表3.1 用户信息表（member）</h2>
+    <table>
+      <tr>
+        <th class="col-no">编号</th>
+        <th class="col-name">字段名</th>
+        <th class="col-type">类型</th>
+        <th class="col-len">长度</th>
+        <th class="col-null">是否非空</th>
+        <th class="col-pk">是否主键</th>
+        <th class="col-note">注释</th>
+      </tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>用户主键ID</td></tr>
+      <tr><td>2</td><td>username</td><td>varchar</td><td>50</td><td>是</td><td>否</td><td>用户登录账号</td></tr>
+      <tr><td>3</td><td>password</td><td>varchar</td><td>255</td><td>是</td><td>否</td><td>用户登录密码</td></tr>
+      <tr><td>4</td><td>nickname</td><td>varchar</td><td>50</td><td>否</td><td>否</td><td>用户昵称</td></tr>
+      <tr><td>5</td><td>phone</td><td>varchar</td><td>20</td><td>否</td><td>否</td><td>用户手机号</td></tr>
+      <tr><td>6</td><td>balance</td><td>decimal</td><td>10,2</td><td>否</td><td>否</td><td>账户余额</td></tr>
+      <tr><td>7</td><td>points</td><td>int</td><td>11</td><td>否</td><td>否</td><td>用户积分</td></tr>
+      <tr><td>8</td><td>level</td><td>int</td><td>11</td><td>否</td><td>否</td><td>会员等级</td></tr>
+      <tr><td>9</td><td>status</td><td>int</td><td>11</td><td>否</td><td>否</td><td>账号状态</td></tr>
+      <tr><td>10</td><td>avatar</td><td>varchar</td><td>255</td><td>否</td><td>否</td><td>用户头像地址</td></tr>
+      <tr><td>11</td><td>hero_text</td><td>varchar</td><td>100</td><td>否</td><td>否</td><td>个性文案</td></tr>
+    </table>
+
+    <h2>表3.2 商品信息表（product）</h2>
+    <table>
+      <tr>
+        <th class="col-no">编号</th>
+        <th class="col-name">字段名</th>
+        <th class="col-type">类型</th>
+        <th class="col-len">长度</th>
+        <th class="col-null">是否非空</th>
+        <th class="col-pk">是否主键</th>
+        <th class="col-note">注释</th>
+      </tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>商品主键ID</td></tr>
+      <tr><td>2</td><td>title</td><td>varchar</td><td>200</td><td>是</td><td>否</td><td>商品标题</td></tr>
+      <tr><td>3</td><td>price</td><td>decimal</td><td>10,2</td><td>是</td><td>否</td><td>商品价格</td></tr>
+      <tr><td>4</td><td>cover_img</td><td>varchar</td><td>255</td><td>否</td><td>否</td><td>商品封面图</td></tr>
+      <tr><td>5</td><td>category</td><td>varchar</td><td>200</td><td>否</td><td>否</td><td>商品分类</td></tr>
+      <tr><td>6</td><td>description</td><td>varchar</td><td>1000</td><td>否</td><td>否</td><td>商品描述</td></tr>
+      <tr><td>7</td><td>is_on_sale</td><td>boolean</td><td>1</td><td>否</td><td>否</td><td>是否上架</td></tr>
+      <tr><td>8</td><td>stock</td><td>int</td><td>11</td><td>否</td><td>否</td><td>商品库存</td></tr>
+      <tr><td>9</td><td>is_seckill</td><td>boolean</td><td>1</td><td>否</td><td>否</td><td>是否秒杀商品</td></tr>
+      <tr><td>10</td><td>seckill_price</td><td>decimal</td><td>10,2</td><td>否</td><td>否</td><td>秒杀价格</td></tr>
+      <tr><td>11</td><td>seckill_stock</td><td>int</td><td>11</td><td>否</td><td>否</td><td>秒杀库存</td></tr>
+      <tr><td>12</td><td>seckill_limit_per_user</td><td>int</td><td>11</td><td>否</td><td>否</td><td>每人限购数量</td></tr>
+      <tr><td>13</td><td>seckill_start_at</td><td>datetime</td><td>19</td><td>否</td><td>否</td><td>秒杀开始时间</td></tr>
+      <tr><td>14</td><td>seckill_end_at</td><td>datetime</td><td>19</td><td>否</td><td>否</td><td>秒杀结束时间</td></tr>
+    </table>
+
+    <h2>表3.3 订单信息表（orders）</h2>
+    <table>
+      <tr>
+        <th class="col-no">编号</th>
+        <th class="col-name">字段名</th>
+        <th class="col-type">类型</th>
+        <th class="col-len">长度</th>
+        <th class="col-null">是否非空</th>
+        <th class="col-pk">是否主键</th>
+        <th class="col-note">注释</th>
+      </tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>订单主键ID</td></tr>
+      <tr><td>2</td><td>order_no</td><td>varchar</td><td>50</td><td>否</td><td>否</td><td>订单编号</td></tr>
+      <tr><td>3</td><td>user_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>下单用户ID</td></tr>
+      <tr><td>4</td><td>product_title</td><td>varchar</td><td>200</td><td>否</td><td>否</td><td>商品标题快照</td></tr>
+      <tr><td>5</td><td>product_img</td><td>varchar</td><td>255</td><td>否</td><td>否</td><td>商品图片快照</td></tr>
+      <tr><td>6</td><td>total_amount</td><td>decimal</td><td>10,2</td><td>是</td><td>否</td><td>订单总金额</td></tr>
+      <tr><td>7</td><td>status</td><td>int</td><td>11</td><td>否</td><td>否</td><td>订单状态</td></tr>
+      <tr><td>8</td><td>address_snapshot</td><td>varchar</td><td>500</td><td>否</td><td>否</td><td>收货地址快照</td></tr>
+      <tr><td>9</td><td>category</td><td>varchar</td><td>50</td><td>否</td><td>否</td><td>商品分类快照</td></tr>
+      <tr><td>10</td><td>created_at</td><td>datetime</td><td>19</td><td>否</td><td>否</td><td>订单创建时间</td></tr>
+      <tr><td>11</td><td>group_team_id</td><td>int</td><td>11</td><td>否</td><td>否</td><td>拼团队伍ID</td></tr>
+      <tr><td>12</td><td>product_id</td><td>int</td><td>11</td><td>否</td><td>否</td><td>商品ID</td></tr>
+      <tr><td>13</td><td>tracking_no</td><td>varchar</td><td>50</td><td>否</td><td>否</td><td>物流单号</td></tr>
+      <tr><td>14</td><td>shipped_at</td><td>datetime</td><td>19</td><td>否</td><td>否</td><td>发货时间</td></tr>
+      <tr><td>15</td><td>is_seckill_order</td><td>boolean</td><td>1</td><td>否</td><td>否</td><td>是否秒杀订单</td></tr>
+    </table>
+
+    <h2>表3.4 收货地址表（address）</h2>
+    <table>
+      <tr><th class="col-no">编号</th><th class="col-name">字段名</th><th class="col-type">类型</th><th class="col-len">长度</th><th class="col-null">是否非空</th><th class="col-pk">是否主键</th><th class="col-note">注释</th></tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>地址主键ID</td></tr>
+      <tr><td>2</td><td>user_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>所属用户ID</td></tr>
+      <tr><td>3</td><td>name</td><td>varchar</td><td>50</td><td>是</td><td>否</td><td>收货人姓名</td></tr>
+      <tr><td>4</td><td>phone</td><td>varchar</td><td>20</td><td>是</td><td>否</td><td>联系电话</td></tr>
+      <tr><td>5</td><td>detail</td><td>varchar</td><td>200</td><td>是</td><td>否</td><td>详细地址</td></tr>
+      <tr><td>6</td><td>is_default</td><td>boolean</td><td>1</td><td>否</td><td>否</td><td>是否默认地址</td></tr>
+    </table>
+
+    <h2>表3.5 购物车表（cart）</h2>
+    <table>
+      <tr><th class="col-no">编号</th><th class="col-name">字段名</th><th class="col-type">类型</th><th class="col-len">长度</th><th class="col-null">是否非空</th><th class="col-pk">是否主键</th><th class="col-note">注释</th></tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>购物车主键ID</td></tr>
+      <tr><td>2</td><td>user_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>所属用户ID</td></tr>
+      <tr><td>3</td><td>product_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>商品ID</td></tr>
+      <tr><td>4</td><td>num</td><td>int</td><td>11</td><td>否</td><td>否</td><td>商品数量</td></tr>
+    </table>
+
+    <h2>表3.6 系统优惠券表（sys_coupon）</h2>
+    <table>
+      <tr><th class="col-no">编号</th><th class="col-name">字段名</th><th class="col-type">类型</th><th class="col-len">长度</th><th class="col-null">是否非空</th><th class="col-pk">是否主键</th><th class="col-note">注释</th></tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>优惠券模板主键ID</td></tr>
+      <tr><td>2</td><td>name</td><td>varchar</td><td>50</td><td>是</td><td>否</td><td>优惠券名称</td></tr>
+      <tr><td>3</td><td>amount</td><td>decimal</td><td>10,2</td><td>是</td><td>否</td><td>优惠金额</td></tr>
+      <tr><td>4</td><td>min_spend</td><td>decimal</td><td>10,2</td><td>是</td><td>否</td><td>使用门槛</td></tr>
+      <tr><td>5</td><td>limit_level</td><td>int</td><td>11</td><td>否</td><td>否</td><td>适用会员等级</td></tr>
+      <tr><td>6</td><td>stock</td><td>int</td><td>11</td><td>否</td><td>否</td><td>库存数量</td></tr>
+      <tr><td>7</td><td>is_active</td><td>boolean</td><td>1</td><td>否</td><td>否</td><td>是否启用</td></tr>
+    </table>
+
+    <h2>表3.7 用户优惠券表（user_coupon）</h2>
+    <table>
+      <tr><th class="col-no">编号</th><th class="col-name">字段名</th><th class="col-type">类型</th><th class="col-len">长度</th><th class="col-null">是否非空</th><th class="col-pk">是否主键</th><th class="col-note">注释</th></tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>用户优惠券主键ID</td></tr>
+      <tr><td>2</td><td>user_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>所属用户ID</td></tr>
+      <tr><td>3</td><td>sys_coupon_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>系统优惠券ID</td></tr>
+      <tr><td>4</td><td>name</td><td>varchar</td><td>50</td><td>否</td><td>否</td><td>优惠券名称</td></tr>
+      <tr><td>5</td><td>amount</td><td>decimal</td><td>10,2</td><td>否</td><td>否</td><td>优惠金额</td></tr>
+      <tr><td>6</td><td>min_spend</td><td>decimal</td><td>10,2</td><td>否</td><td>否</td><td>最低消费金额</td></tr>
+      <tr><td>7</td><td>status</td><td>int</td><td>11</td><td>否</td><td>否</td><td>使用状态</td></tr>
+    </table>
+
+    <h2>表3.8 拼团队伍表（group_team）</h2>
+    <table>
+      <tr><th class="col-no">编号</th><th class="col-name">字段名</th><th class="col-type">类型</th><th class="col-len">长度</th><th class="col-null">是否非空</th><th class="col-pk">是否主键</th><th class="col-note">注释</th></tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>拼团队伍主键ID</td></tr>
+      <tr><td>2</td><td>code</td><td>varchar</td><td>10</td><td>是</td><td>否</td><td>拼团码</td></tr>
+      <tr><td>3</td><td>product_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>拼团商品ID</td></tr>
+      <tr><td>4</td><td>initiator_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>发起人用户ID</td></tr>
+      <tr><td>5</td><td>current_num</td><td>int</td><td>11</td><td>否</td><td>否</td><td>当前拼团人数</td></tr>
+      <tr><td>6</td><td>status</td><td>int</td><td>11</td><td>否</td><td>否</td><td>拼团状态</td></tr>
+      <tr><td>7</td><td>created_at</td><td>datetime</td><td>19</td><td>否</td><td>否</td><td>创建时间</td></tr>
+    </table>
+
+    <h2>表3.9 评论信息表（comment）</h2>
+    <table>
+      <tr><th class="col-no">编号</th><th class="col-name">字段名</th><th class="col-type">类型</th><th class="col-len">长度</th><th class="col-null">是否非空</th><th class="col-pk">是否主键</th><th class="col-note">注释</th></tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>评论主键ID</td></tr>
+      <tr><td>2</td><td>user_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>评论用户ID</td></tr>
+      <tr><td>3</td><td>order_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>关联订单ID</td></tr>
+      <tr><td>4</td><td>content</td><td>varchar</td><td>500</td><td>否</td><td>否</td><td>评论内容</td></tr>
+      <tr><td>5</td><td>rating</td><td>int</td><td>11</td><td>否</td><td>否</td><td>评分</td></tr>
+      <tr><td>6</td><td>created_at</td><td>datetime</td><td>19</td><td>否</td><td>否</td><td>评论时间</td></tr>
+    </table>
+
+    <h2>表3.10 收藏信息表（favorite）</h2>
+    <table>
+      <tr><th class="col-no">编号</th><th class="col-name">字段名</th><th class="col-type">类型</th><th class="col-len">长度</th><th class="col-null">是否非空</th><th class="col-pk">是否主键</th><th class="col-note">注释</th></tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>收藏主键ID</td></tr>
+      <tr><td>2</td><td>user_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>所属用户ID</td></tr>
+      <tr><td>3</td><td>product_id</td><td>int</td><td>11</td><td>是</td><td>否</td><td>商品ID</td></tr>
+      <tr><td>4</td><td>created_at</td><td>datetime</td><td>19</td><td>否</td><td>否</td><td>收藏时间</td></tr>
+    </table>
+
+    <h2>表3.11 轮播图信息表（banner）</h2>
+    <table>
+      <tr><th class="col-no">编号</th><th class="col-name">字段名</th><th class="col-type">类型</th><th class="col-len">长度</th><th class="col-null">是否非空</th><th class="col-pk">是否主键</th><th class="col-note">注释</th></tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>轮播图主键ID</td></tr>
+      <tr><td>2</td><td>img</td><td>varchar</td><td>255</td><td>否</td><td>否</td><td>轮播图地址</td></tr>
+      <tr><td>3</td><td>note</td><td>varchar</td><td>100</td><td>否</td><td>否</td><td>备注信息</td></tr>
+    </table>
+
+    <h2>表3.12 管理员信息表（sys_admin）</h2>
+    <table>
+      <tr><th class="col-no">编号</th><th class="col-name">字段名</th><th class="col-type">类型</th><th class="col-len">长度</th><th class="col-null">是否非空</th><th class="col-pk">是否主键</th><th class="col-note">注释</th></tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>管理员主键ID</td></tr>
+      <tr><td>2</td><td>username</td><td>varchar</td><td>50</td><td>是</td><td>否</td><td>管理员账号</td></tr>
+      <tr><td>3</td><td>password</td><td>varchar</td><td>255</td><td>是</td><td>否</td><td>管理员密码</td></tr>
+      <tr><td>4</td><td>nickname</td><td>varchar</td><td>50</td><td>否</td><td>否</td><td>管理员昵称</td></tr>
+      <tr><td>5</td><td>avatar</td><td>varchar</td><td>255</td><td>否</td><td>否</td><td>管理员头像</td></tr>
+    </table>
+
+    <h2>表3.13 系统配置表（sys_config）</h2>
+    <table>
+      <tr><th class="col-no">编号</th><th class="col-name">字段名</th><th class="col-type">类型</th><th class="col-len">长度</th><th class="col-null">是否非空</th><th class="col-pk">是否主键</th><th class="col-note">注释</th></tr>
+      <tr><td>1</td><td>id</td><td>int</td><td>11</td><td>是</td><td>是</td><td>配置主键ID</td></tr>
+      <tr><td>2</td><td>key</td><td>varchar</td><td>50</td><td>是</td><td>否</td><td>配置键名</td></tr>
+      <tr><td>3</td><td>value</td><td>varchar</td><td>200</td><td>否</td><td>否</td><td>配置值</td></tr>
+      <tr><td>4</td><td>desc</td><td>varchar</td><td>200</td><td>否</td><td>否</td><td>配置说明</td></tr>
+    </table>
+  </div>
+</body>
+</html>

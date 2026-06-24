@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>第五章功能测试用例表</title>
+  <style>
+    body {
+      margin: 0;
+      background: #ffffff;
+      color: #111;
+      font-family: "SimSun", "Songti SC", serif;
+    }
+    .page {
+      width: 900px;
+      margin: 0 auto;
+      padding: 36px 56px 60px;
+      box-sizing: border-box;
+    }
+    h2 {
+      margin: 0 0 28px 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    p {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      line-height: 1.9;
+      text-indent: 2em;
+    }
+    .lead {
+      text-indent: 0;
+      margin-top: 10px;
+      margin-bottom: 8px;
+    }
+    .table-title {
+      text-align: center;
+      font-size: 16px;
+      margin: 34px 0 12px;
+      line-height: 1.6;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 8px 10px;
+      vertical-align: top;
+      word-break: break-all;
+    }
+    th {
+      text-align: center;
+      font-weight: 400;
+    }
+    td.center {
+      text-align: center;
+      vertical-align: middle;
+    }
+    .w-id { width: 14%; }
+    .w-purpose { width: 13%; }
+    .w-step { width: 32%; }
+    .w-expected { width: 18%; }
+    .w-actual { width: 17%; }
+    .w-pass { width: 6%; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h2>5.2 功能测试</h2>
+    <p>本系统测试内容主要围绕用户端商城功能、营销活动功能以及后台管理功能展开。测试时先验证用户注册、登录、商品浏览、购物车与订单等基础业务流程，再对优惠券、积分、拼团、秒杀等活动规则进行检查，最后验证后台管理端在商品维护、订单处理、会员管理和数据统计等方面的实际表现。测试设计如下所示。</p>
+    <p class="lead">用户登录功能测试</p>
+    <p>用户登录前首先需要完成注册，之后才能使用账号和密码进入系统。该功能测试主要用于验证正确登录、错误密码登录以及登录后的页面跳转结果是否符合预期。用户登录功能测试用例如表5.1所示。</p>
+
+    <div class="table-title">表5.1 用户登录功能测试用例及结果</div>
+    <table>
+      <thead>
+        <tr>
+          <th class="w-id">测试编号</th>
+          <th class="w-purpose">测试目的</th>
+          <th class="w-step">测试步骤</th>
+          <th class="w-expected">预期结果</th>
+          <th class="w-actual">实际结果</th>
+          <th class="w-pass">是否通过</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center">TC001</td>
+          <td>验证正确登录</td>
+          <td>1. 输入正确的用户名和密码<br>2. 点击登录按钮</td>
+          <td>显示登录成功，并进入商城首页</td>
+          <td>登录成功，页面跳转至用户首页</td>
+          <td class="center">通过</td>
+        </tr>
+        <tr>
+          <td class="center">TC002</td>
+          <td>验证错误密码登录</td>
+          <td>1. 输入正确用户名和错误密码<br>2. 点击登录按钮</td>
+          <td>系统提示账号或密码错误</td>
+          <td>页面提示登录失败，不进入系统</td>
+          <td class="center">通过</td>
+        </tr>
+        <tr>
+          <td class="center">TC003</td>
+          <td>验证登录会话保持</td>
+          <td>1. 用户登录成功<br>2. 刷新页面<br>3. 再次访问个人中心</td>
+          <td>系统仍能识别当前用户登录状态</td>
+          <td>刷新后用户昵称和账户信息仍正常显示</td>
+          <td class="center">通过</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="lead" style="margin-top: 28px;">购物车与订单功能测试</p>
+    <p>购物车与订单模块是系统交易链路中的核心部分，测试时主要验证加入购物车、修改数量、普通下单、积分抵扣和库存扣减等逻辑是否符合预期。相关测试结果如表5.2所示。</p>
+
+    <div class="table-title">表5.2 购物车与订单功能测试用例及结果</div>
+    <table>
+      <thead>
+        <tr>
+          <th class="w-id">测试编号</th>
+          <th class="w-purpose">测试目的</th>
+          <th class="w-step">测试步骤</th>
+          <th class="w-expected">预期结果</th>
+          <th class="w-actual">实际结果</th>
+          <th class="w-pass">是否通过</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center">TC004</td>
+          <td>验证加入购物车</td>
+          <td>1. 登录用户账号<br>2. 选择商品加入购物车<br>3. 查看购物车列表</td>
+          <td>购物车中新增对应商品</td>
+          <td>商品成功加入购物车，列表正常显示</td>
+          <td class="center">通过</td>
+        </tr>
+        <tr>
+          <td class="center">TC005</td>
+          <td>验证重复加购</td>
+          <td>1. 对同一商品连续加购两次<br>2. 进入购物车查看数量</td>
+          <td>数量累加，不生成重复记录</td>
+          <td>购物车仅保留一条记录，数量变为2</td>
+          <td class="center">通过</td>
+        </tr>
+        <tr>
+          <td class="center">TC006</td>
+          <td>验证普通商品下单</td>
+          <td>1. 选择商品并提交订单<br>2. 选择地址并确认支付</td>
+          <td>订单创建成功，库存减少，余额扣减</td>
+          <td>系统生成订单，余额和库存变化正确</td>
+          <td class="center">通过</td>
+        </tr>
+        <tr>
+          <td class="center">TC007</td>
+          <td>验证积分抵扣</td>
+          <td>1. 选择普通商品<br>2. 勾选积分抵扣<br>3. 提交订单</td>
+          <td>订单金额减少，余额消耗低于未使用积分时</td>
+          <td>订单成功生成，用户余额扣减较少</td>
+          <td class="center">通过</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="lead" style="margin-top: 28px;">拼团与秒杀功能测试</p>
+    <p>拼团和秒杀属于本系统中规则较复杂的活动模块，因此测试时重点检查拼团码校验、成团人数更新、秒杀库存扣减和限购提示是否正确。测试结果如表5.3所示。</p>
+
+    <div class="table-title">表5.3 拼团与秒杀功能测试用例及结果</div>
+    <table>
+      <thead>
+        <tr>
+          <th class="w-id">测试编号</th>
+          <th class="w-purpose">测试目的</th>
+          <th class="w-step">测试步骤</th>
+          <th class="w-expected">预期结果</th>
+          <th class="w-actual">实际结果</th>
+          <th class="w-pass">是否通过</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center">TC008</td>
+          <td>验证发起拼团</td>
+          <td>1. 选择拼团商品<br>2. 发起拼团并提交订单</td>
+          <td>生成拼团码，订单状态为拼团中</td>
+          <td>系统返回拼团码，订单状态显示正常</td>
+          <td class="center">通过</td>
+        </tr>
+        <tr>
+          <td class="center">TC009</td>
+          <td>验证无效拼团码</td>
+          <td>1. 进入参团流程<br>2. 输入无效拼团码<br>3. 提交请求</td>
+          <td>系统提示拼团码无效，不创建订单</td>
+          <td>页面返回无效提示，订单未生成</td>
+          <td class="center">通过</td>
+        </tr>
+        <tr>
+          <td class="center">TC010</td>
+          <td>验证秒杀限购</td>
+          <td>1. 对限购1件的秒杀商品连续下单两次</td>
+          <td>第一次成功，第二次提示超过限购数量</td>
+          <td>第二次下单被系统拦截并给出提示</td>
+          <td class="center">通过</td>
+        </tr>
+        <tr>
+          <td class="center">TC011</td>
+          <td>验证秒杀不支持优惠叠加</td>
+          <td>1. 对秒杀商品提交优惠券和积分抵扣参数</td>
+          <td>系统拒绝下单并提示不支持该操作</td>
+          <td>系统返回失败提示，订单未创建</td>
+          <td class="center">通过</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="lead" style="margin-top: 28px;">后台管理功能测试</p>
+    <p>后台管理端主要用于支撑商品维护、订单处理、会员管理和运营统计，因此测试内容主要围绕管理员登录、订单发货和物流信息查看展开。测试结果如表5.4所示。</p>
+
+    <div class="table-title">表5.4 后台管理功能测试用例及结果</div>
+    <table>
+      <thead>
+        <tr>
+          <th class="w-id">测试编号</th>
+          <th class="w-purpose">测试目的</th>
+          <th class="w-step">测试步骤</th>
+          <th class="w-expected">预期结果</th>
+          <th class="w-actual">实际结果</th>
+          <th class="w-pass">是否通过</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center">TC012</td>
+          <td>验证管理员登录</td>
+          <td>1. 输入管理员账号密码<br>2. 点击登录</td>
+          <td>进入后台管理首页</td>
+          <td>登录成功，显示数据看板和菜单栏</td>
+          <td class="center">通过</td>
+        </tr>
+        <tr>
+          <td class="center">TC013</td>
+          <td>验证订单发货</td>
+          <td>1. 管理员选择待发货订单<br>2. 填写快递单号并提交</td>
+          <td>订单状态变为运输中，并保存物流单号</td>
+          <td>后台发货成功，前台可查看物流信息</td>
+          <td class="center">通过</td>
+        </tr>
+        <tr>
+          <td class="center">TC014</td>
+          <td>验证会员充值</td>
+          <td>1. 管理员选择指定会员<br>2. 输入充值金额并提交</td>
+          <td>会员余额增加</td>
+          <td>余额更新成功，接口返回充值结果</td>
+          <td class="center">通过</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
